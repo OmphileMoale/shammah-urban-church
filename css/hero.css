@@ -1,0 +1,194 @@
+/* ═══════════════════════════════════════
+   hero.css
+   PURPOSE: Full-screen landing hero section.
+   This is the first thing visitors see –
+   the big headline, buttons, and background.
+═══════════════════════════════════════ */
+
+/* ── HERO CONTAINER ─────────────────────
+   min-height: calc(...) makes the hero fill
+   the viewport minus the nav and ticker.
+──────────────────────────────────────── */
+.hero {
+  background: var(--navy);
+  min-height: calc(100vh - var(--nav-h) - 34px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 60px 32px 80px;
+}
+
+/* ── DECORATIVE BACKGROUND ──────────────
+   ::before draws a subtle grid of lines.
+   ::after draws a soft glow top-right.
+   pointer-events:none means they never
+   block clicks.
+──────────────────────────────────────── */
+.hero-bg {
+  position: absolute; inset: 0;
+  pointer-events: none;
+}
+.hero-bg::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    repeating-linear-gradient(0deg,   rgba(201,168,76,.04) 0, rgba(201,168,76,.04) 1px, transparent 0, transparent 60px),
+    repeating-linear-gradient(90deg,  rgba(201,168,76,.04) 0, rgba(201,168,76,.04) 1px, transparent 0, transparent 60px);
+}
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(107,26,82,.5) 0%, transparent 65%);
+}
+.hero-orb {
+  position: absolute;
+  bottom: -120px; left: -120px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(201,168,76,.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* ── HERO CONTENT ───────────────────── */
+.hero-inner {
+  position: relative;
+  max-width: 720px;
+  text-align: center;
+  z-index: 1;
+}
+
+/* Small pill tag above the headline */
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: 30px;
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 24px;
+  animation: fadeDown .6s ease both; /* defined below */
+}
+/* Pulsing green dot inside the eyebrow */
+.hero-eyebrow::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(.7); }
+}
+
+/* Main headline */
+.hero h1 {
+  font-family: var(--font-d);
+  font-size: clamp(32px, 5.5vw, 58px); /* fluid: between 32px and 58px */
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.12;
+  margin-bottom: 12px;
+  animation: fadeDown .6s .1s ease both; /* .1s delay – staggers with eyebrow */
+}
+.hero h1 em {
+  color: var(--gold);
+  font-style: italic;
+  display: block;
+}
+
+.hero-sub {
+  color: rgba(255,255,255,.55);
+  font-size: 16px;
+  line-height: 1.7;
+  max-width: 480px;
+  margin: 0 auto 32px;
+  animation: fadeDown .6s .2s ease both;
+}
+
+/* CTA button row */
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fadeDown .6s .3s ease both;
+}
+
+/* Next service info bar */
+.hero-service {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 50px;
+  padding: 10px 20px;
+  margin-top: 36px;
+  animation: fadeDown .6s .4s ease both;
+}
+.service-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(99,153,34,.3);
+  animation: pulse 2s infinite;
+}
+.hero-service p { font-size: 13px; color: rgba(255,255,255,.6); }
+.hero-service strong { color: #fff; }
+
+/* Scroll indicator at the bottom */
+.hero-scroll {
+  position: absolute;
+  bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: fadeDown .6s .6s ease both;
+}
+.hero-scroll span { font-size: 10px; color: rgba(255,255,255,.3); letter-spacing: 1px; text-transform: uppercase; }
+.scroll-mouse {
+  width: 22px; height: 34px;
+  border: 1.5px solid rgba(255,255,255,.2);
+  border-radius: 11px;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 5px;
+}
+.scroll-mouse::after {
+  content: '';
+  width: 3px; height: 7px;
+  background: rgba(255,255,255,.4);
+  border-radius: 2px;
+  animation: scrollAnim 2s infinite;
+}
+@keyframes scrollAnim {
+  0%,100% { transform: translateY(0);  opacity: 1; }
+  70%      { transform: translateY(8px); opacity: 0; }
+}
+
+/* Entrance animation used by several hero children */
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── RESPONSIVE ─────────────────────── */
+@media (max-width: 768px) {
+  .hero { padding: 48px 20px 72px; min-height: auto; }
+}
+@media (max-width: 480px) {
+  .hero h1 { font-size: 30px; }
+  .hero-btns { flex-direction: column; align-items: center; }
+  .btn-gold, .btn-ghost { width: 100%; justify-content: center; }
+}

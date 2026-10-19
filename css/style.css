@@ -1,0 +1,317 @@
+/* ═══════════════════════════════════════
+   style.css
+   PURPOSE: Design tokens (colour, spacing, font variables)
+            + base reset applied to every page.
+   HOW IT WORKS: CSS variables (--navy, --gold, etc.) are
+   declared on :root so every other CSS file can use them.
+═══════════════════════════════════════ */
+
+/* ── 1. DESIGN TOKENS ──────────────────
+   Think of these like constants in code.
+   Change --navy once here and it updates
+   everywhere on the site automatically.
+──────────────────────────────────────── */
+:root {
+  /* Brand colours */
+  --navy:      #3D0C2F;   /* dark plum – primary brand colour */
+  --navy-deep: #280820;   /* even darker – used for footer/ticker bg */
+  --navy-mid:  #5C1A47;   /* lighter plum – hover states */
+  --gold:      #C9A84C;   /* warm gold – accent colour */
+  --gold-lt:   #F0D98A;   /* lighter gold – hover on gold buttons */
+  --gold-pale: #FDF6E3;   /* near-white gold tint */
+  --ivory:     #FAF8F3;   /* off-white page background */
+  --rose:      #F5EAF0;   /* pale pink – section backgrounds */
+
+  /* Border colours (rgba = semi-transparent navy) */
+  --border:    rgba(61,12,47,.12);
+  --border-md: rgba(61,12,47,.2);
+
+  /* Text colours (darkest → lightest) */
+  --text:   #1A0A14;
+  --text-2: #5C3A4F;
+  --text-3: #9A7A8A;
+
+  /* Semantic colours */
+  --green: #639922;
+  --blue:  #378ADD;
+  --red:   #C0392B;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px  rgba(61,12,47,.08);
+  --shadow:    0 4px 20px rgba(61,12,47,.10);
+  --shadow-lg: 0 10px 40px rgba(61,12,47,.14);
+
+  /* Radii */
+  --r:    10px;
+  --r-lg: 16px;
+
+  /* Navigation height – used in multiple places */
+  --nav-h: 60px;
+
+  /* Font stacks */
+  --font-d: 'Playfair Display', Georgia, serif; /* display/headings */
+  --font-b: 'DM Sans', system-ui, sans-serif;   /* body text */
+  --font-m: 'DM Mono', monospace;               /* times/data */
+}
+
+/* ── 2. RESET ───────────────────────────
+   Browsers add their own margins/padding
+   by default. We wipe them here so our
+   layout is fully under our control.
+──────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box; /* padding/border included in element width */
+  margin:  0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth; /* smooth anchor-link scrolling */
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-b);
+  background: var(--ivory);
+  color: var(--text);
+  overflow-x: hidden; /* no horizontal scroll */
+  line-height: 1.6;
+}
+
+a  { text-decoration: none; color: inherit; }
+button { font-family: var(--font-b); cursor: pointer; border: none; outline: none; }
+img { max-width: 100%; display: block; }
+
+/* ── 3. ACCESSIBILITY ───────────────────
+   Skip link lets keyboard users jump
+   straight to main content, bypassing nav.
+──────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -40px; left: 0;
+  background: var(--gold);
+  color: var(--navy);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 0 0 var(--r) 0;
+  z-index: 9999;
+  transition: top .2s;
+}
+.skip-link:focus { top: 0; } /* appears when tabbed to */
+
+/* ── 4. SECTION LAYOUT UTILITIES ────────
+   Reusable helpers used across sections.
+──────────────────────────────────────── */
+.section        { padding: 80px 32px; }
+.section-narrow { max-width: 960px;  margin: 0 auto; }
+.section-wide   { max-width: 1200px; margin: 0 auto; }
+
+/* Section label (small gold tag above headings) */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.section-tag::before {
+  content: '';
+  width: 24px; height: 2px;
+  background: var(--gold);
+  border-radius: 1px;
+}
+
+/* Section heading */
+.section-title {
+  font-family: var(--font-d);
+  font-size: clamp(26px, 3.5vw, 40px); /* scales between 26px and 40px */
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 14px;
+  line-height: 1.2;
+}
+.section-title em { color: var(--gold); font-style: italic; }
+
+.section-sub {
+  font-size: 15px;
+  color: var(--text-2);
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+/* ── 5. SHARED BUTTONS ──────────────────
+   Reused across hero, events, ministries.
+──────────────────────────────────────── */
+.btn-gold {
+  background: var(--gold);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 14px;
+  padding: 13px 28px;
+  border-radius: var(--r);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: background .15s, transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 14px rgba(201,168,76,.35);
+}
+.btn-gold:hover {
+  background: var(--gold-lt);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(201,168,76,.45);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #fff;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 13px 28px;
+  border-radius: var(--r);
+  border: 1px solid rgba(255,255,255,.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition: all .15s;
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.35);
+}
+
+.btn-outline-navy {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1.5px solid var(--navy);
+  color: var(--navy);
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 11px 26px;
+  border-radius: var(--r);
+  transition: all .15s;
+}
+.btn-outline-navy:hover {
+  background: var(--navy);
+  color: var(--gold);
+}
+
+/* ── 6. TOAST NOTIFICATIONS ─────────────
+   Small popup messages shown after actions
+   like RSVP (defined in toast.js).
+──────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  top: calc(var(--nav-h) + 12px);
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--navy);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 12px 18px;
+  border-radius: var(--r);
+  border-left: 3px solid var(--green);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  pointer-events: auto;
+  animation: toastIn .3s ease;
+  min-width: 260px;
+  max-width: 340px;
+}
+.toast.error { border-left-color: var(--red); }
+.toast.warn  { border-left-color: var(--gold); }
+.toast i { font-size: 17px; flex-shrink: 0; }
+.toast.success i { color: var(--green); }
+.toast.error   i { color: var(--red); }
+.toast.warn    i { color: var(--gold); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── 7. FLOATING BUTTONS ────────────────
+   WhatsApp bubble + back-to-top button.
+──────────────────────────────────────── */
+.wa-btn {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  width: 52px; height: 52px;
+  background: #25D366;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(37,211,102,.4);
+  z-index: 800;
+  transition: transform .2s, box-shadow .2s;
+  text-decoration: none;
+}
+.wa-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 22px rgba(37,211,102,.55);
+}
+.wa-btn i { font-size: 26px; color: #fff; }
+.wa-tooltip {
+  position: absolute;
+  right: 60px;
+  white-space: nowrap;
+  background: var(--navy);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+  box-shadow: var(--shadow);
+}
+.wa-btn:hover .wa-tooltip { opacity: 1; }
+
+.back-top {
+  position: fixed;
+  bottom: 90px; right: 24px;
+  width: 42px; height: 42px;
+  background: var(--navy);
+  border: 1px solid rgba(201,168,76,.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 800;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .3s, transform .3s, background .15s;
+  box-shadow: var(--shadow-sm);
+}
+.back-top.visible { opacity: 1; transform: translateY(0); }
+.back-top:hover   { background: var(--navy-mid); }
+
+/* ── 8. RESPONSIVE HELPERS ──────────────
+   Shared breakpoints for layout sections.
+──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .section { padding: 52px 20px; }
+}
+@media (max-width: 480px) {
+  .section { padding: 40px 16px; }
+}

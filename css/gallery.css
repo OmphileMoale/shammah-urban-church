@@ -1,0 +1,441 @@
+/* ═══════════════════════════════════════
+   css/gallery.css
+   PURPOSE: Styles for gallery.php.
+   All CSS variables come from style.css.
+═══════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════
+   1. HERO
+════════════════════════════════════════ */
+.gallery-hero {
+  position: relative;
+  background: linear-gradient(135deg, var(--navy) 0%, #6B1A52 100%);
+  padding: 100px 24px 72px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.gallery-hero-bg {
+  position: absolute;
+  inset: 0;
+  opacity: .06;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--gold) 0, var(--gold) 1px,
+    transparent 0, transparent 50%
+  );
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+.gallery-hero-inner {
+  position: relative;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.gallery-hero-inner .hero-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+
+.gallery-hero-inner h1 {
+  font-family: var(--font-d);
+  font-size: clamp(28px, 5vw, 46px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+
+.gallery-hero-inner h1 em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.gallery-hero-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,.7);
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+
+/* ══════════════════════════════════════
+   2. FILTER TABS
+════════════════════════════════════════ */
+.gallery-filter-section {
+  padding: 40px 24px 0;
+  text-align: center;
+}
+
+.gallery-filter-bar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 6px;
+  box-shadow: var(--shadow-sm);
+}
+
+.gf-btn {
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-b);
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background .2s, color .2s;
+}
+
+.gf-btn:hover {
+  background: var(--rose);
+  color: var(--navy);
+}
+
+.gf-btn.active {
+  background: var(--navy);
+  color: #fff;
+}
+
+
+/* ══════════════════════════════════════
+   3. GALLERY GRID
+════════════════════════════════════════ */
+.gallery-section {
+  padding: 48px 24px 80px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gallery-grid {
+  columns: 3 280px;
+  column-gap: 16px;
+}
+
+.gallery-item {
+  break-inside: avoid;
+  margin-bottom: 16px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform .25s, box-shadow .25s;
+}
+
+.gallery-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.gallery-item:hover .gi-overlay {
+  opacity: 1;
+}
+
+/* The image / visual card */
+.gi-card {
+  width: 100%;
+  display: block;
+  aspect-ratio: unset;
+}
+
+/* SVG placeholder cards with themed illustrations */
+.gi-svg {
+  width: 100%;
+  display: block;
+}
+
+/* Overlay on hover */
+.gi-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(61,12,47,.85) 0%, rgba(61,12,47,.3) 60%, transparent 100%);
+  opacity: 0;
+  transition: opacity .25s;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+}
+
+.gi-overlay-title {
+  font-family: var(--font-d);
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.gi-overlay-cat {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.gi-zoom-icon {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,.15);
+  backdrop-filter: blur(6px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  opacity: 0;
+  transition: opacity .25s;
+}
+
+.gallery-item:hover .gi-zoom-icon {
+  opacity: 1;
+}
+
+/* Category badge */
+.gi-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 3px 10px;
+  border-radius: 50px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+.gi-badge-worship  { background: rgba(201,168,76,.9);  color: #3D0C2F; }
+.gi-badge-youth    { background: rgba(55,138,221,.9);  color: #fff; }
+.gi-badge-outreach { background: rgba(99,153,34,.9);   color: #fff; }
+.gi-badge-events   { background: rgba(61,12,47,.85);   color: var(--gold); }
+.gi-badge-life     { background: rgba(245,106,0,.85);  color: #fff; }
+
+
+/* ══════════════════════════════════════
+   4. LIGHTBOX
+════════════════════════════════════════ */
+.gallery-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(20,4,16,.92);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+}
+
+.gallery-lightbox.open {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.lb-inner {
+  position: relative;
+  max-width: 860px;
+  width: 100%;
+  background: var(--navy-deep);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  transform: scale(.95);
+  transition: transform .25s;
+}
+
+.gallery-lightbox.open .lb-inner {
+  transform: scale(1);
+}
+
+.lb-media {
+  width: 100%;
+  display: block;
+  max-height: 65vh;
+  object-fit: cover;
+}
+
+.lb-info {
+  padding: 20px 24px 24px;
+}
+
+.lb-title {
+  font-family: var(--font-d);
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.lb-desc {
+  font-size: 14px;
+  color: rgba(255,255,255,.6);
+  line-height: 1.6;
+}
+
+.lb-meta {
+  margin-top: 10px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.lb-tag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.lb-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  transition: background .2s;
+  z-index: 10;
+}
+
+.lb-close:hover {
+  background: rgba(255,255,255,.25);
+}
+
+.lb-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  border: none;
+  transition: background .2s;
+  z-index: 10;
+}
+
+.lb-nav:hover { background: rgba(255,255,255,.25); }
+.lb-prev { left: 14px; }
+.lb-next { right: 14px; }
+
+
+/* ══════════════════════════════════════
+   5. EMPTY STATE (when filter has 0 items)
+════════════════════════════════════════ */
+.gallery-empty {
+  text-align: center;
+  padding: 64px 24px;
+  display: none;
+}
+
+.gallery-empty.visible {
+  display: block;
+}
+
+.gallery-empty i {
+  font-size: 48px;
+  color: var(--text-3);
+  margin-bottom: 12px;
+}
+
+.gallery-empty p {
+  color: var(--text-2);
+  font-size: 15px;
+}
+
+
+/* ══════════════════════════════════════
+   6. CTA STRIP
+════════════════════════════════════════ */
+.gallery-cta {
+  background: linear-gradient(135deg, var(--navy) 0%, #6B1A52 100%);
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.gallery-cta h2 {
+  font-family: var(--font-d);
+  font-size: clamp(24px, 4vw, 36px);
+  color: #fff;
+  margin-bottom: 12px;
+}
+
+.gallery-cta p {
+  color: rgba(255,255,255,.7);
+  font-size: 15px;
+  margin-bottom: 28px;
+}
+
+.gallery-cta-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+
+/* ══════════════════════════════════════
+   7. HIDE FILTERED ITEMS
+════════════════════════════════════════ */
+.gallery-item[data-hidden] {
+  display: none;
+}
+
+
+/* ══════════════════════════════════════
+   8. RESPONSIVE
+════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .gallery-grid {
+    columns: 1;
+  }
+
+  .gallery-filter-bar {
+    border-radius: var(--r-lg);
+    padding: 4px;
+  }
+
+  .gf-btn {
+    padding: 7px 14px;
+    font-size: 12px;
+  }
+
+  .lb-nav { display: none; }
+}

@@ -1,0 +1,981 @@
+/* ═══════════════════════════════════════════════════
+   css/donate.css
+   PURPOSE: All styles for donate.php only.
+   
+   HOW IT WORKS:
+   All colour values use CSS variables from style.css
+   (e.g. var(--navy), var(--gold)). That means if the
+   brand colour changes, you update it once in style.css
+   and it updates everywhere automatically.
+   
+   FILE STRUCTURE:
+   1.  Hero banner
+   2.  Fund progress bars
+   3.  Main donate grid (2-column layout)
+   4.  Member badge + guest notice
+   5.  Donation form card
+   6.  Form field components (df-* prefix)
+   7.  Preset amount buttons
+   8.  EFT banking panel
+   9.  Custom checkbox (WhatsApp)
+   10. Submit button
+   11. Right column — bank summary card
+   12. Donation receipt
+   13. Donation history table
+   14. Animations (bar entrance, card fade, shake)
+   15. Responsive (mobile)
+═══════════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════════
+   1. HERO BANNER
+   ──────────────────────────────────────────────────
+   Dark gradient background with a decorative cross
+   watermark made from two overlapping CSS gradients.
+   No image file needed — pure CSS.
+══════════════════════════════════════════════════ */
+.donate-hero {
+  position: relative;
+  background: linear-gradient(150deg, var(--navy) 0%, #6B1A52 60%, #3D0C2F 100%);
+  padding: 80px 32px 64px;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Cross watermark — two overlapping linear-gradients */
+.donate-hero::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 300px; height: 300px;
+  opacity: .04;
+  background-image:
+    linear-gradient(var(--gold) 0%, var(--gold) 100%),
+    linear-gradient(var(--gold) 0%, var(--gold) 100%);
+  background-size: 40px 100%, 100% 40px;
+  background-position: center, center;
+  background-repeat: no-repeat;
+  pointer-events: none; /* clicks pass through the watermark */
+}
+
+.donate-hero-inner {
+  position: relative;
+  z-index: 1; /* sits above the ::before watermark */
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.donate-hero-title {
+  font-family: var(--font-d);
+  font-size: clamp(30px, 5vw, 52px);
+  /*
+   * clamp(min, preferred, max)
+   * Font scales with viewport but never below 30px
+   * or above 52px. Better than fixed px for responsive.
+   */
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin: 10px 0 16px;
+}
+.donate-hero-title em { font-style: italic; color: var(--gold); }
+
+.donate-hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,.7);
+  line-height: 1.7;
+  max-width: 560px;
+  margin: 0 auto 24px;
+}
+
+.donate-scripture {
+  display: inline-block;
+  background: rgba(255,255,255,.06);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--r) var(--r) 0;
+  padding: 14px 20px;
+  text-align: left;
+  max-width: 520px;
+  font-size: 14px;
+  color: rgba(255,255,255,.75);
+  font-style: italic;
+  line-height: 1.7;
+}
+.donate-scripture cite {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+
+/* ══════════════════════════════════════════════════
+   2. FUND PROGRESS BARS
+   ──────────────────────────────────────────────────
+   Three cards in a CSS grid.
+   
+   The animated bars work like this:
+   - .fund-bar-fill starts at width: 0%
+   - donate.js reads data-pct="62" from the element
+   - When the card scrolls into view (IntersectionObserver),
+     JS sets element.style.width = '62%'
+   - The CSS transition: width 1.2s animates the change
+   
+   The --bar-color CSS variable is set inline from PHP:
+   style="--bar-color:#C9A84C"
+   This lets each bar have its own colour while using
+   one shared CSS rule.
+══════════════════════════════════════════════════ */
+.donate-funds { background: var(--ivory); }
+.donate-funds-title {
+  font-family: var(--font-d);
+  font-size: clamp(22px, 3vw, 32px);
+  color: var(--navy);
+  font-weight: 700;
+  margin: 6px 0 32px;
+}
+
+.funds-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.fund-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  /* Entrance animation — defined in section 14 */
+  animation: cardFadeUp .5s ease both;
+}
+.fund-card:nth-child(2) { animation-delay: .1s; }
+.fund-card:nth-child(3) { animation-delay: .2s; }
+
+.fund-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.fund-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.fund-info { flex: 1; }
+
+.fund-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 2px;
+}
+
+.fund-pct {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fund-amounts { text-align: right; }
+
+.fund-raised {
+  font-family: var(--font-m); /* monospace — aligns numbers */
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.fund-target {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* The grey track behind the coloured fill */
+.fund-bar-track {
+  height: 8px;
+  background: rgba(61,12,47,.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+/* The coloured fill — starts at 0, animates to data-pct */
+.fund-bar-fill {
+  height: 100%;
+  width: 0%; /* JS sets this to the real percentage */
+  background: var(--bar-color);
+  border-radius: 99px;
+  transition: width 1.2s cubic-bezier(.4,0,.2,1);
+  /*
+   * cubic-bezier(.4,0,.2,1) = Material Design "standard"
+   * easing. Starts fast, slows to a stop. More natural
+   * than linear or ease-in-out.
+   */
+}
+
+
+/* ══════════════════════════════════════════════════
+   3. MAIN DONATE GRID (2-COLUMN LAYOUT)
+   ──────────────────────────────────────────────────
+   Left column (form) takes 3 fractions of space.
+   Right column (receipt) takes 2 fractions.
+   On mobile (< 900px) they stack vertically.
+══════════════════════════════════════════════════ */
+.donate-main { background: var(--rose); }
+
+.donate-grid {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 32px;
+  align-items: start; /* columns don't stretch to equal height */
+}
+
+
+/* ══════════════════════════════════════════════════
+   4. MEMBER BADGE + GUEST NOTICE
+══════════════════════════════════════════════════ */
+.donate-member-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(61,12,47,.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--navy);
+  font-weight: 500;
+  margin-bottom: 18px;
+}
+.donate-member-badge i { color: var(--green); font-size: 18px; }
+.dmb-id {
+  margin-left: auto;
+  font-family: var(--font-m);
+  font-size: 12px;
+  background: var(--navy);
+  color: var(--gold);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.donate-guest-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #FFF8E7;
+  border: 1px solid #E8C84C;
+  border-radius: var(--r);
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.donate-guest-notice i { color: var(--gold); font-size: 18px; margin-top: 1px; }
+.donate-guest-notice a { color: var(--navy); font-weight: 700; text-decoration: underline; }
+
+
+/* ══════════════════════════════════════════════════
+   5. DONATION FORM CARD
+══════════════════════════════════════════════════ */
+.donate-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 32px;
+  box-shadow: var(--shadow);
+}
+
+.donate-card-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.donate-card-title {
+  font-family: var(--font-d);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 24px;
+}
+
+
+/* ══════════════════════════════════════════════════
+   6. FORM FIELD COMPONENTS (df-* prefix)
+   ──────────────────────────────────────────────────
+   df = "donate form". Using a prefix means these
+   styles only apply inside the donate form and
+   won't accidentally affect login or register forms.
+══════════════════════════════════════════════════ */
+.df-group { margin-bottom: 20px; }
+
+.df-row--two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.df-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-2);
+  margin-bottom: 6px;
+}
+.df-req      { color: var(--gold); }
+.df-optional { font-weight: 400; text-transform: none; color: var(--text-3); font-size: 11px; }
+
+/* Input wrapper — positions the icon inside the input */
+.df-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.df-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-3);
+  font-size: 16px;
+  pointer-events: none; /* icon doesn't block clicks */
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+}
+
+.df-input {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r);
+  padding: 13px 14px 13px 42px; /* left gap for the icon */
+  font-size: 14.5px;
+  font-family: var(--font-b);
+  color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none; /* removes browser default select arrow */
+}
+
+/* Custom select arrow (replaces browser default) */
+.df-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239A7A8A' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.df-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+}
+.df-input:focus-within ~ .df-icon,
+.df-input-wrap:focus-within .df-icon { color: var(--gold); }
+
+/* Error + valid states set by donate.js */
+.df-input.error { border-color: var(--red);   box-shadow: 0 0 0 3px rgba(192,57,43,.08); }
+.df-input.valid { border-color: var(--green); }
+
+.df-textarea {
+  padding-top: 13px;
+  resize: vertical;
+  min-height: 70px;
+}
+
+/* Error message below field */
+.df-error {
+  display: block;
+  font-size: 11.5px;
+  color: var(--red);
+  margin-top: 5px;
+  min-height: 16px; /* prevents layout jump when error appears/disappears */
+}
+
+/* Category description hint */
+.df-cat-desc {
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-style: italic;
+  margin-top: 5px;
+  min-height: 18px;
+  transition: opacity .2s;
+}
+
+/* Character counter for notes */
+.df-char-count {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: right;
+  margin-top: 3px;
+}
+
+/* "R" prefix inside custom amount input */
+.df-input-prefix { position: relative; }
+.df-prefix-label {
+  position: absolute;
+  left: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-2);
+  pointer-events: none;
+  z-index: 1;
+}
+.df-input-prefix .df-input { padding-left: 28px; }
+
+/* Slide-down animation for custom amount box */
+.df-custom-wrap {
+  margin-top: 10px;
+  animation: slideDown .25s ease both;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ══════════════════════════════════════════════════
+   7. PRESET AMOUNT BUTTONS
+   ──────────────────────────────────────────────────
+   Six buttons in a flex row that wraps on mobile.
+   
+   .df-preset.active is added by donate.js when
+   a preset is clicked — shows gold background.
+   
+   .df-preset--custom gets a dashed border to
+   visually distinguish it from the fixed amounts.
+══════════════════════════════════════════════════ */
+.df-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.df-preset {
+  flex: 1;
+  min-width: 60px;
+  padding: 10px 8px;
+  background: #fff;
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s, transform .1s;
+}
+.df-preset:hover {
+  border-color: var(--gold);
+  background: var(--gold-pale);
+}
+.df-preset.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--gold);
+}
+.df-preset--custom {
+  border-style: dashed;
+  color: var(--text-2);
+}
+.df-preset--custom.active {
+  background: var(--navy);
+  border-style: solid;
+  color: var(--gold);
+}
+
+
+/* ══════════════════════════════════════════════════
+   8. EFT BANKING PANEL
+   ──────────────────────────────────────────────────
+   Shown when method = EFT.
+   hidden attribute is removed by donate.js.
+   
+   The "Copy" button uses navigator.clipboard API.
+   After copying it briefly shows "Copied ✓".
+══════════════════════════════════════════════════ */
+.df-eft-panel {
+  background: #F0F7FF;
+  border: 1px solid #B8D4F0;
+  border-radius: var(--r);
+  padding: 16px;
+  margin-bottom: 20px;
+  animation: slideDown .25s ease both;
+}
+
+.df-eft-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+
+.df-eft-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(55,138,221,.1);
+  gap: 8px;
+}
+.df-eft-row:last-child { border-bottom: none; }
+.df-eft-row span:first-child { color: var(--text-3); font-size: 12px; }
+.df-eft-row span:nth-child(2) { font-weight: 600; color: var(--navy); }
+
+.df-copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  background: rgba(55,138,221,.1);
+  border: 1px solid rgba(55,138,221,.25);
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background .15s;
+  margin-left: auto;
+}
+.df-copy-btn:hover    { background: rgba(55,138,221,.2); }
+.df-copy-btn.copied   { color: var(--green); background: rgba(99,153,34,.1); border-color: rgba(99,153,34,.3); }
+
+
+/* ══════════════════════════════════════════════════
+   9. CUSTOM CHECKBOX (WHATSAPP)
+   ──────────────────────────────────────────────────
+   The real <input type="checkbox"> is hidden (opacity:0).
+   We show a styled .df-check-box span instead.
+   When the real input is :checked, we style the box.
+   
+   WHY CUSTOM:
+   Browser default checkboxes look different on every
+   OS. A custom checkbox gives consistent styling and
+   shows CSS knowledge.
+══════════════════════════════════════════════════ */
+.df-check-row { margin-bottom: 24px; }
+
+.df-check-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.df-check-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0; /* hidden but still focusable */
+}
+
+.df-check-box {
+  width: 18px; height: 18px;
+  border: 1.5px solid var(--border-md);
+  border-radius: 5px;
+  background: #fff;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+}
+
+/* Gold fill when checked */
+.df-check-label input:checked ~ .df-check-box {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+/* Gold tick mark — pure CSS, no image */
+.df-check-label input:checked ~ .df-check-box::after {
+  content: '';
+  width: 10px; height: 6px;
+  border-left: 2px solid var(--navy);
+  border-bottom: 2px solid var(--navy);
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+
+/* ══════════════════════════════════════════════════
+   10. SUBMIT BUTTON
+   ──────────────────────────────────────────────────
+   donate.js disables this button + swaps the icon
+   to a spinner while the fetch() is in flight.
+   This prevents double-submissions.
+══════════════════════════════════════════════════ */
+.df-submit {
+  width: 100%;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 15px 24px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  margin-bottom: 14px;
+  letter-spacing: .3px;
+}
+.df-submit:hover {
+  background: var(--navy-mid);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(61,12,47,.2);
+}
+.df-submit:active { transform: scale(.98); }
+.df-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.df-security {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  justify-content: center;
+}
+.df-security i { color: var(--green); }
+
+
+/* ══════════════════════════════════════════════════
+   11. RIGHT COLUMN — BANK SUMMARY CARD
+══════════════════════════════════════════════════ */
+.donate-side-col { display: flex; flex-direction: column; gap: 20px; }
+
+.donate-bank-card {
+  background: var(--navy);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  color: #fff;
+}
+
+.dbc-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.dbc-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.dbc-row span:first-child { color: rgba(255,255,255,.5); }
+.dbc-row span:last-child  { font-weight: 600; }
+
+/* Highlighted account number row */
+.dbc-highlight span:last-child {
+  font-family: var(--font-m);
+  color: var(--gold);
+  font-size: 15px;
+}
+
+.dbc-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: rgba(255,255,255,.5);
+  line-height: 1.5;
+}
+.dbc-note i { color: var(--gold); margin-top: 1px; flex-shrink: 0; }
+
+
+/* ══════════════════════════════════════════════════
+   12. DONATION RECEIPT
+   ──────────────────────────────────────────────────
+   hidden by default — donate.js reveals it after
+   a successful submission by removing the hidden attr.
+   
+   The receipt is styled to look like a real paper
+   receipt with a dashed border and a logo header.
+   
+   @media print (in donate.php) hides everything
+   else and makes this receipt print cleanly.
+══════════════════════════════════════════════════ */
+.donate-receipt {
+  background: #fff;
+  border: 2px dashed var(--border-md);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  animation: receiptReveal .4s ease both;
+}
+
+@keyframes receiptReveal {
+  from { opacity: 0; transform: scale(.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.dr-header {
+  background: var(--navy);
+  padding: 20px;
+  text-align: center;
+}
+.dr-logo {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: var(--font-d);
+  font-size: 15px;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 10px;
+}
+.dr-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+.dr-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+.dr-addr { font-size: 11px; color: rgba(255,255,255,.5); }
+
+.dr-body { padding: 16px 20px; }
+
+.dr-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+}
+.dr-row span:first-child { color: var(--text-3); }
+.dr-row span:last-child  { font-weight: 600; color: var(--navy); }
+.dr-mono { font-family: var(--font-m); letter-spacing: .5px; }
+
+/* Total row — larger, gold amount */
+.dr-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.dr-total-amt {
+  font-family: var(--font-d);
+  font-size: 24px;
+  color: var(--gold);
+}
+
+.dr-footer {
+  background: var(--ivory);
+  border-top: 1px solid var(--border);
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+  line-height: 1.6;
+}
+
+.dr-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 18px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+.dr-print-btn:hover { background: var(--navy-mid); }
+
+/* Placeholder before donation is made */
+.donate-receipt-placeholder {
+  background: #fff;
+  border: 2px dashed var(--border);
+  border-radius: var(--r-lg);
+  padding: 40px 24px;
+  text-align: center;
+}
+.drp-icon {
+  font-size: 40px;
+  color: var(--border-md);
+  margin-bottom: 12px;
+}
+.drp-text {
+  font-size: 13.5px;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+
+/* ══════════════════════════════════════════════════
+   13. DONATION HISTORY TABLE
+══════════════════════════════════════════════════ */
+.donate-history { background: var(--ivory); }
+.dh-title {
+  font-family: var(--font-d);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 6px 0 24px;
+}
+
+.dh-table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden; /* clips table corners */
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.dh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.dh-table thead { background: var(--navy); }
+.dh-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+}
+.dh-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+}
+.dh-table tr:last-child td { border-bottom: none; }
+.dh-table tr:hover td    { background: var(--gold-pale); }
+
+.dh-ref {
+  font-family: var(--font-m);
+  font-size: 13px;
+  color: var(--navy);
+}
+.dh-amount {
+  text-align: right;
+  font-weight: 700;
+  color: var(--navy);
+  font-family: var(--font-m);
+}
+
+/* Method badge — EFT = blue, Cash = green, Card = purple */
+.dh-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.dh-badge--eft  { background: rgba(55,138,221,.12); color: var(--blue); }
+.dh-badge--cash { background: rgba(99,153,34,.12);  color: var(--green); }
+.dh-badge--card { background: rgba(61,12,47,.08);   color: var(--navy); }
+
+.dh-portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color .15s;
+}
+.dh-portal-link:hover { color: var(--gold); }
+
+
+/* ══════════════════════════════════════════════════
+   14. ANIMATIONS
+══════════════════════════════════════════════════ */
+@keyframes cardFadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Shake — triggered by JS on failed validation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+.shake { animation: shake .4s ease-in-out; }
+
+
+/* ══════════════════════════════════════════════════
+   15. RESPONSIVE — MOBILE (< 900px)
+   ──────────────────────────────────────────────────
+   The 2-column grid becomes 1-column.
+   Fund cards stack vertically.
+   Guest fields stack (1 column instead of 2).
+══════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .donate-grid     { grid-template-columns: 1fr; }
+  .funds-grid      { grid-template-columns: 1fr; }
+  .df-row--two     { grid-template-columns: 1fr; }
+  .donate-card     { padding: 20px; }
+  .donate-side-col { order: -1; } /* receipt moves above the form on mobile */
+}
+
+@media (max-width: 600px) {
+  .df-presets { gap: 6px; }
+  .df-preset  { min-width: 50px; font-size: 13px; padding: 9px 6px; }
+}

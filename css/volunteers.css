@@ -1,0 +1,1287 @@
+/* ═══════════════════════════════════════
+   css/volunteers.css
+   PURPOSE: All styles for volunteers.php.
+   DEPENDS ON: style.css must load first
+   (it defines --navy, --gold, --r, etc.)
+═══════════════════════════════════════ */
+
+
+/* ── 1. HERO ────────────────────────────
+   Dark plum hero with geometric pattern
+   overlay and centred content.
+──────────────────────────────────────── */
+.vol-hero {
+  position: relative;
+  background: var(--navy-deep);
+  overflow: hidden;
+  padding: 100px 32px 72px;
+  text-align: center;
+}
+
+/* Subtle dot-grid pattern overlay */
+.vol-hero-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(201,168,76,.12) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+.vol-hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* "Serve with Purpose" eyebrow tag */
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  background: rgba(201,168,76,.12);
+  border: 1px solid rgba(201,168,76,.2);
+  padding: 6px 14px;
+  border-radius: 99px;
+  margin-bottom: 18px;
+}
+
+.vol-hero h1 {
+  font-family: var(--font-d);
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+.vol-hero h1 em {
+  color: var(--gold);
+  font-style: italic;
+}
+
+.vol-hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,.72);
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 auto 36px;
+}
+
+/* Hero stats strip */
+.vol-hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: var(--r-lg);
+  padding: 18px 32px;
+  backdrop-filter: blur(4px);
+}
+
+.v-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 28px;
+}
+.v-stat strong {
+  font-family: var(--font-d);
+  font-size: 28px;
+  color: var(--gold);
+  font-weight: 800;
+  line-height: 1;
+}
+.v-stat span {
+  font-size: 12px;
+  color: rgba(255,255,255,.6);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+/* Vertical dividers between stat items */
+.v-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255,255,255,.12);
+  flex-shrink: 0;
+}
+
+
+/* ── 2. BREADCRUMB ──────────────────────
+   Thin bar: Home > Volunteers
+──────────────────────────────────────── */
+.breadcrumb-bar {
+  background: var(--gold-pale);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 32px;
+}
+
+.breadcrumb {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.breadcrumb li + li::before {
+  content: '›';
+  margin-right: 8px;
+  color: var(--text-3);
+}
+.breadcrumb a {
+  color: var(--navy);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: color .15s;
+}
+.breadcrumb a:hover { color: var(--gold); }
+.breadcrumb [aria-current="page"] { color: var(--text-3); }
+
+
+/* ── 3. TABS BAR ────────────────────────
+   Sticky below nav. Same pattern as
+   sermons tabs but with 4 buttons.
+──────────────────────────────────────── */
+.vol-tabs-wrap {
+  position: sticky;
+  top: var(--nav-h);
+  z-index: 90;
+  background: #fff;
+  border-bottom: 2px solid var(--border);
+  box-shadow: 0 2px 12px rgba(61,12,47,.06);
+}
+
+.vol-tabs {
+  display: flex;
+  align-items: stretch;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+.vol-tabs::-webkit-scrollbar { display: none; }
+
+/* Individual tab button */
+.v-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 20px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.v-tab:hover { color: var(--navy); }
+.v-tab.active {
+  color: var(--navy);
+  font-weight: 700;
+  border-bottom-color: var(--gold);
+}
+
+/* Numeric badge on the Schedule tab */
+.tab-badge {
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+  min-width: 18px;
+  text-align: center;
+}
+
+
+/* ── 4. TAB PANELS ──────────────────────
+   Only the .active panel is shown; JS
+   swaps the class on tab click.
+──────────────────────────────────────── */
+.tab-panel {
+  display: none;
+}
+.tab-panel.active {
+  display: block;
+  animation: fadeUp .28s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ── 5. CATEGORY FILTER PILLS ───────────
+   Horizontal pill bar for filtering roles.
+──────────────────────────────────────── */
+.cat-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.cat-pill:hover {
+  border-color: var(--navy);
+  color: var(--navy);
+}
+.cat-pill.active {
+  background: var(--navy);
+  color: var(--gold);
+  border-color: var(--navy);
+}
+
+/* Count bubble inside each pill */
+.pill-count {
+  background: rgba(255,255,255,.15);
+  color: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  min-width: 20px;
+  text-align: center;
+}
+.cat-pill:not(.active) .pill-count {
+  background: var(--border);
+  color: var(--text-3);
+}
+
+
+/* ── 6. ROLES GRID ──────────────────────
+   3-column responsive grid of role cards.
+──────────────────────────────────────── */
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Individual role card */
+.role-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform .18s, box-shadow .18s;
+}
+.role-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+
+/* Coloured top stripe */
+.role-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+.role-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 10px;
+}
+
+/* Icon + tag row */
+.role-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.role-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Category tag */
+.role-cat-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--navy);
+  background: var(--rose);
+  padding: 3px 9px;
+  border-radius: 4px;
+}
+
+/* "X spots left" urgent badge */
+.urgent-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #a32d2d;
+  background: rgba(192,57,43,.1);
+  padding: 3px 9px;
+  border-radius: 4px;
+  margin-left: 4px;
+  animation: pulse 1.8s ease infinite;
+}
+
+/* "✓ Registered" badge */
+.registered-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #3b6d11;
+  background: rgba(99,153,34,.12);
+  padding: 3px 9px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .65; }
+}
+
+.role-title {
+  font-family: var(--font-d);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.3;
+}
+
+.role-desc {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.65;
+}
+
+/* Schedule line */
+.role-schedule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-family: var(--font-m);
+}
+.role-schedule i { color: var(--gold); }
+
+/* Requirements pill tags */
+.role-reqs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.req-tag {
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+
+/* Footer: active count + register button */
+.role-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.role-active-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.role-active-count i { font-size: 14px; color: var(--navy); }
+
+/* Register button */
+.btn-register {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  transition: background .15s, transform .15s;
+}
+.btn-register:hover {
+  background: var(--navy-mid);
+  transform: translateY(-1px);
+}
+
+/* Registered (disabled) state */
+.btn-registered {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(99,153,34,.1);
+  color: #3b6d11;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  border: 1px solid rgba(99,153,34,.25);
+  cursor: not-allowed;
+}
+
+/* No results state */
+.no-roles {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  color: var(--text-3);
+  text-align: center;
+}
+.no-roles.visible { display: flex; }
+.no-roles i { font-size: 40px; color: var(--border-md); }
+.no-roles p { font-size: 15px; }
+
+
+/* ── 7. LOGIN PROMPT ────────────────────
+   Shown inside tabs when the user is not
+   logged in (Schedule, Log Hours, Summary).
+──────────────────────────────────────── */
+.login-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 64px 20px;
+  text-align: center;
+  background: var(--rose);
+  border-radius: var(--r-lg);
+  border: 1px dashed var(--border-md);
+}
+.login-prompt i {
+  font-size: 42px;
+  color: var(--navy);
+  opacity: .35;
+}
+.login-prompt h3 {
+  font-family: var(--font-d);
+  font-size: 20px;
+  color: var(--navy);
+}
+.login-prompt p {
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 360px;
+}
+
+
+/* ── 8. MY SCHEDULE ─────────────────────
+   Shift card list for Tab 2.
+──────────────────────────────────────── */
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shift-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .15s;
+}
+.shift-card:hover { box-shadow: var(--shadow); }
+
+/* Date badge (day + month stacked) */
+.shift-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--r);
+  padding: 8px 12px;
+  min-width: 54px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.shift-day {
+  font-family: var(--font-d);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--gold);
+  line-height: 1;
+}
+.shift-month {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: rgba(255,255,255,.7);
+  margin-top: 2px;
+}
+
+.shift-info {
+  flex: 1;
+}
+.shift-role {
+  font-weight: 700;
+  color: var(--navy);
+  font-size: 15px;
+  margin-bottom: 5px;
+}
+.shift-meta {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.shift-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shift-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status badges */
+.shift-status {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+}
+.shift-status.confirmed {
+  background: rgba(99,153,34,.12);
+  color: #3b6d11;
+}
+.shift-status.pending {
+  background: rgba(201,168,76,.15);
+  color: #854f0b;
+}
+
+/* Cancel shift button */
+.btn-cancel-shift {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #a32d2d;
+  background: transparent;
+  border: 1px solid rgba(192,57,43,.2);
+  border-radius: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn-cancel-shift:hover {
+  background: rgba(192,57,43,.08);
+  border-color: rgba(192,57,43,.4);
+}
+
+
+/* ── 9. LOG HOURS FORM ──────────────────
+   Two-column layout: form left, recent
+   log entries right.
+──────────────────────────────────────── */
+.log-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+  align-items: start;
+}
+
+.log-form {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Shared form controls */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.form-optional {
+  font-weight: 400;
+  color: var(--text-3);
+  font-size: 12px;
+}
+.req-star { color: #a32d2d; }
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-family: var(--font-b);
+  color: var(--text);
+  background: var(--ivory);
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.15);
+}
+.form-input.error,
+.form-select.error {
+  border-color: var(--red);
+}
+.form-textarea { resize: vertical; }
+
+/* Inline field error */
+.field-error {
+  font-size: 12px;
+  color: var(--red);
+  min-height: 16px;
+}
+
+/* Submit button */
+.btn-submit-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 13px 28px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(201,168,76,.35);
+  transition: background .15s, transform .15s;
+  align-self: flex-start;
+}
+.btn-submit-hours:hover {
+  background: var(--gold-lt);
+  transform: translateY(-2px);
+}
+
+/* Recent logs panel (right column) */
+.recent-logs {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.recent-logs-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.log-entry {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.log-entry:last-child { border-bottom: none; }
+.log-entry-date {
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-m);
+  margin-bottom: 2px;
+}
+.log-entry-role {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.log-entry-hours {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+
+/* ── 10. HOURS SUMMARY ──────────────────
+   KPI cards, progress bar, and table.
+──────────────────────────────────────── */
+.summary-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  font-size: 20px;
+}
+.kpi-icon.gold  { background: rgba(201,168,76,.15); color: var(--gold); }
+.kpi-icon.navy  { background: rgba(61,12,47,.1);    color: var(--navy); }
+.kpi-icon.green { background: rgba(99,153,34,.12);  color: var(--green); }
+
+.kpi-val {
+  font-family: var(--font-d);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1;
+}
+.kpi-label {
+  font-size: 12.5px;
+  color: var(--text-2);
+  margin-top: 6px;
+}
+
+/* Progress bar */
+.progress-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: var(--shadow-sm);
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.progress-nums {
+  font-family: var(--font-m);
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.progress-track {
+  height: 14px;
+  background: var(--rose);
+  border-radius: 99px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--navy), var(--gold));
+  border-radius: 99px;
+  width: var(--pct);
+  transition: width 1.2s cubic-bezier(.25,.46,.45,.94);
+}
+
+.progress-message {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 10px;
+}
+
+/* Hours table */
+.hours-table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.table-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--ivory);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.hours-table thead tr {
+  background: var(--rose);
+}
+.hours-table th {
+  text-align: left;
+  padding: 11px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: var(--navy);
+}
+.hours-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: top;
+}
+.hours-table tr:last-child td { border-bottom: none; }
+.hours-table tbody tr:hover { background: var(--ivory); }
+.hours-table tfoot tr { background: var(--gold-pale); }
+.hours-table tfoot td { font-weight: 700; border-top: 2px solid var(--gold); }
+
+.table-date {
+  font-family: var(--font-m);
+  font-size: 12.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.notes-cell {
+  font-size: 12.5px;
+  color: var(--text-2);
+  max-width: 280px;
+}
+
+.hours-badge {
+  display: inline-block;
+  background: rgba(61,12,47,.08);
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.hours-badge.gold {
+  background: rgba(201,168,76,.18);
+  color: #7a5c1e;
+}
+
+/* Empty state (used in multiple tabs) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: var(--text-3);
+  text-align: center;
+}
+.empty-state i { font-size: 38px; opacity: .35; }
+
+
+/* ── 11. TESTIMONIALS ───────────────────
+   3-column grid of quote cards.
+──────────────────────────────────────── */
+.testimonials-section {
+  background: var(--rose);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.testimonial-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: transform .18s, box-shadow .18s;
+}
+.testimonial-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+}
+
+/* Large decorative quote mark */
+.quote-mark {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  font-family: var(--font-d);
+  font-size: 72px;
+  line-height: 1;
+  color: var(--gold);
+  opacity: .18;
+  pointer-events: none;
+  user-select: none;
+}
+
+.testimonial-text {
+  font-size: 14.5px;
+  color: var(--text-2);
+  line-height: 1.75;
+  font-style: italic;
+}
+
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Avatar circle */
+.t-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.t-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--navy);
+}
+.t-role {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+
+/* ── 12. CTA SECTION ────────────────────
+   Bottom call-to-action band.
+──────────────────────────────────────── */
+.vol-cta {
+  background: var(--navy-deep);
+  text-align: center;
+}
+.vol-cta .section-tag { color: var(--gold); }
+.vol-cta .section-tag::before { background: var(--gold); }
+.vol-cta .section-title { color: #fff; }
+.vol-cta .section-title em { color: var(--gold); }
+.vol-cta .section-sub { color: rgba(255,255,255,.65); }
+
+.cta-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.vol-cta .btn-outline-navy {
+  border-color: rgba(255,255,255,.25);
+  color: rgba(255,255,255,.8);
+}
+.vol-cta .btn-outline-navy:hover {
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  border-color: rgba(255,255,255,.5);
+}
+
+
+/* ── 13. REGISTRATION MODAL ─────────────
+   Full-screen overlay with centred form.
+──────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28,8,20,.65);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
+  backdrop-filter: blur(3px);
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: var(--r-lg);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(28,8,20,.35);
+  transform: translateY(18px) scale(.97);
+  transition: transform .25s;
+  display: flex;
+  flex-direction: column;
+}
+.modal-overlay.open .modal-box {
+  transform: translateY(0) scale(1);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.modal-title {
+  font-family: var(--font-d);
+  font-size: 20px;
+  color: var(--navy);
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.modal-close:hover { background: var(--rose); color: var(--navy); }
+
+.modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+/* Availability checkbox grid */
+.avail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.avail-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  transition: border-color .15s, background .15s;
+}
+.avail-check:hover { border-color: var(--navy); background: var(--ivory); }
+.avail-check input[type="checkbox"] {
+  accent-color: var(--navy);
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.avail-check:has(input:checked) {
+  border-color: var(--gold);
+  background: var(--gold-pale);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--ivory);
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+}
+
+.btn-modal-cancel {
+  background: transparent;
+  border: 1px solid var(--border-md);
+  color: var(--text-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-modal-cancel:hover { background: var(--rose); }
+
+.btn-modal-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 11px 24px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-modal-submit:hover { background: var(--navy-mid); }
+.btn-modal-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+
+/* ── 14. RESPONSIVE ─────────────────────
+   Adjust grids for tablets and phones.
+──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .roles-grid           { grid-template-columns: repeat(2, 1fr); }
+  .testimonials-grid    { grid-template-columns: 1fr; }
+  .summary-kpis         { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .vol-hero             { padding: 80px 20px 52px; }
+  .vol-hero-stats       { padding: 14px 16px; gap: 0; }
+  .v-stat               { padding: 0 14px; }
+  .v-stat strong        { font-size: 22px; }
+  .v-stat-divider       { height: 28px; }
+
+  .roles-grid           { grid-template-columns: 1fr; }
+  .summary-kpis         { grid-template-columns: 1fr; }
+  .log-layout           { grid-template-columns: 1fr; }
+  .recent-logs          { order: -1; } /* show recent logs above form on mobile */
+
+  .shift-card           { flex-wrap: wrap; }
+  .shift-right          { width: 100%; flex-direction: row; justify-content: space-between; }
+
+  .avail-grid           { grid-template-columns: 1fr; }
+
+  .vol-tabs             { padding: 0 12px; }
+  .v-tab                { padding: 12px 14px; font-size: 12.5px; }
+}
+
+@media (max-width: 480px) {
+  .vol-hero-stats       { flex-direction: column; gap: 12px; }
+  .v-stat-divider       { width: 60px; height: 1px; }
+  .cat-filter           { gap: 6px; }
+  .cat-pill             { padding: 6px 12px; font-size: 12px; }
+  .breadcrumb-bar       { padding: 10px 16px; }
+}

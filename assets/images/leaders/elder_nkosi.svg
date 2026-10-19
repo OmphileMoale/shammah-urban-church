@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5C1A47"/>
+      <stop offset="100%" stop-color="#2D0A23"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <!-- Shoulders / jacket -->
+  <ellipse cx="100" cy="210" rx="85" ry="55" fill="#1a0614"/>
+  <rect x="35" y="158" width="130" height="55" fill="#1a0614"/>
+  <!-- Shirt collar -->
+  <rect x="88" y="150" width="24" height="20" rx="2" fill="white"/>
+  <!-- Neck -->
+  <rect x="84" y="132" width="32" height="30" rx="4" fill="#6a4838"/>
+  <!-- Head - younger look -->
+  <ellipse cx="100" cy="105" rx="42" ry="47" fill="#6a4838"/>
+  <!-- Ears -->
+  <ellipse cx="58" cy="108" rx="7" ry="9" fill="#6a4838"/>
+  <ellipse cx="142" cy="108" rx="7" ry="9" fill="#6a4838"/>
+  <!-- Short hair -->
+  <ellipse cx="100" cy="66" rx="42" ry="17" fill="#1a0614"/>
+  <!-- Slight beard / goatee -->
+  <ellipse cx="100" cy="132" rx="14" ry="8" fill="#1a0614" opacity="0.5"/>
+  <!-- Eyes -->
+  <ellipse cx="84" cy="100" rx="7" ry="5" fill="white"/>
+  <ellipse cx="116" cy="100" rx="7" ry="5" fill="white"/>
+  <circle cx="85" cy="100" r="4" fill="#1a0614"/>
+  <circle cx="117" cy="100" r="4" fill="#1a0614"/>
+  <circle cx="86" cy="99" r="1.5" fill="white"/>
+  <circle cx="118" cy="99" r="1.5" fill="white"/>
+  <!-- Eyebrows - slight arch -->
+  <path d="M77 92 Q84 88 91 92" fill="none" stroke="#1a0614" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M109 92 Q116 88 123 92" fill="none" stroke="#1a0614" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Nose -->
+  <ellipse cx="100" cy="111" rx="5" ry="4" fill="#5a3828"/>
+  <!-- Confident smile -->
+  <path d="M87 123 Q100 133 113 123" fill="none" stroke="#3a2018" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Gold accent ring -->
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#C9A84C" stroke-width="3" stroke-dasharray="8,4"/>
+</svg>

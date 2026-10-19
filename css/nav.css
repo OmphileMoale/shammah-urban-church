@@ -1,0 +1,226 @@
+/* ═══════════════════════════════════════
+   nav.css
+   PURPOSE: Styles for the announcement
+   ticker strip and the sticky top nav.
+   Kept separate so it's easy to edit
+   nav styles without touching anything else.
+═══════════════════════════════════════ */
+
+/* ── TICKER ─────────────────────────────
+   The scrolling announcement bar at the
+   very top of the page.
+   It works by animating a very wide <div>
+   from right to left in a loop.
+──────────────────────────────────────── */
+.ticker-wrap {
+  background: var(--navy-deep);
+  padding: 7px 0;
+  overflow: hidden;       /* hides text outside the strip */
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(201,168,76,.15);
+}
+
+/* Gold "LIVE" badge at left edge */
+.ticker-badge {
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 10px;
+  flex-shrink: 0;         /* never shrinks */
+  margin-left: 16px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+/* The scrolling track –
+   translateX moves it infinitely leftward.
+   -50% means it scrolls one full copy then
+   seamlessly loops to the start.          */
+.ticker-track {
+  display: flex;
+  white-space: nowrap;    /* never wraps to a new line */
+  animation: ticker 28s linear infinite;
+  margin-left: 20px;
+}
+
+.ticker-track span {
+  font-size: 11.5px;
+  color: rgba(255,255,255,.65);
+  padding-right: 60px;
+}
+.ticker-track span strong { color: var(--gold); font-weight: 600; }
+
+/* The actual scroll animation */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); } /* -50% = scroll one full copy */
+}
+
+/* ── NAV ────────────────────────────────
+   position: sticky means it stays at the
+   top when you scroll down.
+──────────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 500;           /* above page content */
+  background: var(--navy);
+  height: var(--nav-h);   /* 60px defined in style.css */
+  display: flex;
+  align-items: center;
+  padding: 0 32px;
+  box-shadow: 0 2px 16px rgba(0,0,0,.25);
+  transition: box-shadow .3s;
+}
+/* Extra shadow when user has scrolled (class added by JS) */
+.nav.scrolled { box-shadow: 0 4px 24px rgba(0,0,0,.35); }
+
+/* ── BRAND / LOGO AREA ──────────────── */
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 28px;
+  flex-shrink: 0;
+}
+.nav-emblem {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), var(--gold-lt));
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-d);
+  font-size: 12px; font-weight: 700;
+  color: var(--navy);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(201,168,76,.3);
+}
+.nav-church strong { display: block; color: #fff; font-size: 13px; font-weight: 600; line-height: 1.2; }
+.nav-church small  { color: var(--gold); font-size: 9.5px; letter-spacing: .4px; }
+
+/* ── NAV LINKS LIST ─────────────────── */
+.nav-links {
+  display: flex;
+  gap: 2px;
+  flex: 1;        /* takes up all remaining space */
+  list-style: none;
+}
+.nav-links a {
+  color: rgba(255,255,255,.55);
+  font-size: 13px;
+  padding: 6px 11px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+  display: block;
+}
+.nav-links a:hover  { color: #fff; background: rgba(255,255,255,.06); }
+.nav-links a.active { color: var(--gold); background: rgba(201,168,76,.1); }
+
+/* ── ACTION BUTTONS ─────────────────── */
+.nav-actions { display: flex; align-items: center; gap: 8px; margin-left: 12px; }
+
+.nav-btn-login {
+  color: rgba(255,255,255,.7);
+  font-size: 12.5px;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.15);
+  background: transparent;
+  transition: all .15s;
+}
+.nav-btn-login:hover { background: rgba(255,255,255,.07); color: #fff; }
+
+.nav-btn-register {
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 7px;
+  transition: background .15s, transform .1s;
+}
+.nav-btn-register:hover { background: var(--gold-lt); transform: translateY(-1px); }
+
+/* Portal button shown only when logged in */
+.nav-portal {
+  background: rgba(201,168,76,.15);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid rgba(201,168,76,.3);
+  display: flex; align-items: center; gap: 6px;
+  transition: all .15s;
+}
+.nav-portal:hover { background: rgba(201,168,76,.22); }
+
+/* ── HAMBURGER (mobile) ─────────────── */
+.nav-hamburger {
+  display: none;           /* hidden on desktop */
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-left: auto;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px; height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: all .25s;
+}
+/* Animate bars to an X when menu is open */
+.nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ── MOBILE DRAWER ──────────────────── */
+.nav-drawer {
+  display: none;
+  position: fixed;
+  top: var(--nav-h);       /* sits right below the nav bar */
+  left: 0; right: 0;
+  background: var(--navy-deep);
+  border-top: 1px solid rgba(201,168,76,.15);
+  z-index: 499;
+  padding: 16px 24px 24px;
+  transform: translateY(-100%); /* start off-screen above */
+  transition: transform .3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.nav-drawer.open { transform: translateY(0); } /* slide down when open */
+
+.nav-drawer a {
+  display: block;
+  color: rgba(255,255,255,.7);
+  font-size: 15px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  transition: color .15s;
+}
+.nav-drawer a:hover { color: var(--gold); }
+.nav-drawer a:last-child { border-bottom: none; }
+
+.nav-drawer .drawer-btns { display: flex; gap: 10px; margin-top: 16px; }
+.nav-drawer .drawer-btns button {
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--r);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ── RESPONSIVE ─────────────────────── */
+@media (max-width: 768px) {
+  .nav-links, .nav-actions { display: none; }   /* hide desktop links */
+  .nav-hamburger            { display: flex; }  /* show burger */
+  .nav-drawer               { display: block; } /* enable drawer */
+  .nav { padding: 0 20px; }
+}

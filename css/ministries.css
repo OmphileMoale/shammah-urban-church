@@ -1,0 +1,669 @@
+/* ═══════════════════════════════════════
+   css/ministries.css
+   PURPOSE: All styles for ministries.php.
+   Depends on style.css being loaded first
+   for --navy, --gold, --ivory etc.
+═══════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════
+   HERO BANNER
+   Matches the gradient pattern used on
+   about.php and events.php for consistency.
+══════════════════════════════════════ */
+.min-hero {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+  padding: 80px 32px 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Diagonal grid pattern — purely decorative */
+.min-hero-pattern {
+  position: absolute;
+  inset: 0;
+  opacity: .05;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--gold) 0, var(--gold) 1px,
+    transparent 0, transparent 50%
+  );
+  background-size: 20px 20px;
+}
+
+.min-hero-inner {
+  position: relative; /* sits above the pattern */
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+/* Small uppercase label above the H1 */
+.hero-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.min-hero h1 {
+  font-family: var(--font-d);
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+.min-hero h1 em { color: var(--gold); font-style: italic; }
+
+.min-hero-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,.6);
+  line-height: 1.7;
+  max-width: 540px;
+  margin: 0 auto 32px;
+}
+
+/* Three KPI pills inside the hero */
+.min-hero-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 50px;
+  padding: 10px 28px;
+}
+.hero-stat {
+  text-align: center;
+  padding: 0 20px;
+}
+.hero-stat strong {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.hero-stat span {
+  font-size: 10.5px;
+  color: rgba(255,255,255,.5);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+/* Thin vertical divider between stats */
+.hero-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255,255,255,.1);
+  flex-shrink: 0;
+}
+
+
+/* ══════════════════════════════════════
+   KPI BAND
+   Four summary cards below the hero.
+   Same visual language as admin_dashboard.
+══════════════════════════════════════ */
+.min-kpi-band {
+  background: var(--ivory);
+  padding: 28px 32px;
+  border-bottom: 1px solid var(--border);
+}
+.min-kpi-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.min-kpi-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.min-kpi-card > .ti {
+  font-size: 24px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.min-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; /* prevents overflow in grid */
+}
+.min-kpi-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.min-kpi-val--small { font-size: 13px; white-space: normal; }
+.min-kpi-lbl {
+  font-size: 11px;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+
+/* ══════════════════════════════════════
+   FILTER + SEARCH BAR
+   Reuses .filter-pills and .events-search
+   classes already defined in events.css.
+   We redeclare here so ministries.css is
+   self-contained (events.css not always loaded).
+══════════════════════════════════════ */
+.min-controls {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  position: sticky;
+  top: var(--nav-h); /* sticks just below the nav bar */
+  z-index: 90;
+  box-shadow: 0 2px 8px rgba(61,12,47,.05);
+}
+.min-controls-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  flex-wrap: wrap;
+}
+
+/* Filter pills row */
+.filter-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.filter-pill:hover { background: var(--rose); color: var(--navy); border-color: var(--border-md); }
+.filter-pill.active {
+  background: var(--navy);
+  color: var(--gold);
+  border-color: var(--navy);
+}
+.filter-pill .ti { font-size: 13px; }
+
+/* Search input wrapper */
+.events-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ivory);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 7px 14px;
+  min-width: 200px;
+}
+.events-search .ti { color: var(--text-3); font-size: 15px; }
+.events-search input {
+  border: none;
+  background: transparent;
+  font-family: var(--font-b);
+  font-size: 13.5px;
+  color: var(--text);
+  width: 100%;
+  outline: none;
+}
+.events-search input::placeholder { color: var(--text-3); }
+
+
+/* ══════════════════════════════════════
+   MINISTRIES SECTION WRAPPER
+══════════════════════════════════════ */
+.min-section { padding: 64px 32px; background: var(--ivory); }
+.min-section--rose { background: var(--rose); }
+
+.section-label-row { margin-bottom: 36px; }
+
+
+/* ══════════════════════════════════════
+   MINISTRY CARDS GRID
+   2-column on desktop, 1 on mobile.
+══════════════════════════════════════ */
+.min-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* Individual card */
+.min-card {
+  background: #fff;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  transition: transform .2s, box-shadow .2s;
+}
+.min-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+/* Gold border highlight when already joined */
+.min-card--joined {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201,168,76,.2), var(--shadow-sm);
+}
+
+/* 5px coloured stripe at very top */
+.min-card-stripe { height: 5px; flex-shrink: 0; }
+
+/* Header row: icon circle + ministry name */
+.min-card-header {
+  padding: 20px 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.min-card-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 22px;
+  transition: transform .2s;
+}
+.min-card:hover .min-card-icon { transform: scale(1.08); }
+
+.min-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.min-card-title-group h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0;
+}
+
+/* "Joined" green badge beside the ministry name */
+.min-joined-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(99,153,34,.12);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: .3px;
+}
+
+/* Short description */
+.min-card-desc {
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  padding: 12px 20px 0;
+}
+
+/* Single meta line (schedule or icon + text) */
+.min-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  padding: 8px 20px 0;
+}
+.min-card-meta .ti { color: var(--text-3); font-size: 14px; flex-shrink: 0; }
+.min-card-meta strong { color: var(--navy); font-weight: 600; }
+
+/* Row with leader meta on left and member count on right */
+.min-card-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.min-member-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.min-member-count .ti { font-size: 13px; }
+.min-member-count strong { color: var(--navy); font-weight: 700; }
+
+/* Next event strip */
+.min-next-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px;
+  background: var(--rose);
+  border-radius: var(--r);
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  flex-wrap: wrap;
+}
+.min-next-event .ti { color: var(--gold); font-size: 14px; flex-shrink: 0; }
+.min-next-event strong { color: var(--navy); font-weight: 600; }
+
+/* RSVP quick link inside the next event strip */
+.min-rsvp-link {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  background: var(--gold);
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.min-rsvp-link:hover { background: var(--gold-lt); }
+
+
+/* ══════════════════════════════════════
+   EXPANDABLE DETAIL PANEL
+   max-height transition creates a smooth
+   accordion without JavaScript height
+   calculation. JS just toggles .expanded.
+══════════════════════════════════════ */
+.min-card-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .35s ease;
+}
+.min-card-detail.expanded {
+  max-height: 400px; /* generous upper limit */
+}
+.min-card-detail-inner {
+  padding: 0 20px 16px;
+  border-top: 1px solid var(--border);
+  margin: 0 20px;
+}
+.min-detail-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.75;
+  padding-top: 14px;
+  margin-bottom: 14px;
+}
+/* Testimonial blockquote */
+.min-testimonial {
+  border-left: 3px solid var(--gold);
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--gold-pale);
+  border-radius: 0 var(--r) var(--r) 0;
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.min-testimonial .ti {
+  font-size: 16px;
+  color: var(--gold);
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+
+/* ══════════════════════════════════════
+   CARD ACTION ROW
+   "Learn More" toggle + Join/Leave button
+══════════════════════════════════════ */
+.min-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: auto; /* pushes actions to bottom of flex card */
+}
+
+/* Learn More toggle */
+.min-learn-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1.5px solid var(--border-md);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all .15s;
+}
+.min-learn-btn:hover { border-color: var(--navy); color: var(--navy); }
+/* Rotate the chevron when expanded */
+.min-learn-btn[aria-expanded="true"] .ti-chevron-down {
+  transform: rotate(180deg);
+}
+.min-learn-btn .ti { transition: transform .25s ease; }
+
+/* Join Ministry button (default state) */
+.min-join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 20px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s, transform .1s;
+  flex-shrink: 0;
+}
+.min-join-btn:hover { background: var(--navy-mid); transform: translateY(-1px); }
+.min-join-btn:active { transform: scale(.97); }
+
+/* Joined state (green) */
+.min-join-btn--joined {
+  background: rgba(99,153,34,.12);
+  color: var(--green);
+  border: 1.5px solid rgba(99,153,34,.3);
+}
+.min-join-btn--joined:hover {
+  background: rgba(192,57,43,.1);
+  color: var(--red);
+  border-color: rgba(192,57,43,.3);
+}
+
+/* Login-to-Join state (ghost style) */
+.min-join-btn--login {
+  background: transparent;
+  color: var(--text-2);
+  border: 1.5px solid var(--border-md);
+}
+.min-join-btn--login:hover { background: var(--rose); color: var(--navy); border-color: var(--navy); }
+
+
+/* ══════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════ */
+.min-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 32px;
+  color: var(--text-3);
+}
+.min-empty .ti { font-size: 40px; display: block; margin-bottom: 12px; }
+.min-empty p { font-size: 15px; color: var(--text-2); }
+
+
+/* ══════════════════════════════════════
+   CELL GROUPS TABLE
+══════════════════════════════════════ */
+.min-groups-table-wrap {
+  overflow-x: auto; /* horizontal scroll on mobile */
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+.min-groups-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 13.5px;
+}
+.min-groups-table thead th {
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  padding: 12px 16px;
+  text-align: left;
+  white-space: nowrap;
+}
+.min-groups-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  vertical-align: middle;
+}
+.min-groups-table tbody tr:last-child td { border-bottom: none; }
+.min-groups-table tbody tr:hover td { background: var(--ivory); }
+
+/* Group name is a bit bolder */
+.group-name { font-weight: 600; color: var(--navy); }
+
+/* Suburb pill */
+.group-suburb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.group-suburb .ti { font-size: 13px; color: var(--text-3); }
+
+/* Spots available badges */
+.spots-ok     { color: var(--green); font-weight: 600; font-size: 12px; }
+.spots-urgent { color: var(--red);   font-weight: 600; font-size: 12px; }
+.spots-full   { color: var(--text-3);font-weight: 600; font-size: 12px; }
+
+/* Join button inside the table */
+.min-group-btn {
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 16px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: background .15s;
+}
+.min-group-btn:hover { background: var(--navy-mid); }
+.min-group-btn--full {
+  background: var(--ivory);
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  cursor: not-allowed;
+}
+
+/* "Start a new group" CTA strip below the table */
+.min-groups-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 18px 24px;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+.min-groups-cta-text {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.min-groups-cta-text .ti {
+  font-size: 24px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.min-groups-cta-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 2px;
+}
+.min-groups-cta-text span {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .min-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .min-hero  { padding: 56px 20px 44px; }
+  .min-hero-stats { flex-direction: column; gap: 12px; border-radius: var(--r-lg); padding: 16px 24px; }
+  .hero-stat-divider { display: none; }
+  .min-kpi-band { padding: 20px; }
+  .min-kpi-grid { grid-template-columns: 1fr 1fr; }
+  .min-controls { padding: 0 16px; }
+  .min-controls-inner { flex-direction: column; align-items: stretch; }
+  .events-search { min-width: 0; }
+  .min-section { padding: 48px 20px; }
+  .min-grid { grid-template-columns: 1fr; }
+  .min-groups-cta { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 480px) {
+  .min-kpi-grid { grid-template-columns: 1fr; }
+  .min-hero h1  { font-size: 28px; }
+  .filter-pills { gap: 4px; }
+  .filter-pill  { font-size: 11.5px; padding: 5px 10px; }
+}

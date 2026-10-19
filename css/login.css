@@ -1,0 +1,532 @@
+/* ═══════════════════════════════════════
+   css/login.css
+   PURPOSE: Styles for login.php only.
+   All CSS variables come from style.css.
+═══════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════
+   1. SPLIT-SCREEN WRAPPER
+   Full-viewport-height two-column layout.
+   Left = branding panel, Right = form.
+════════════════════════════════════════ */
+.login-section {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  min-height: calc(100vh - var(--nav-h) - 44px); /* subtract ticker + nav */
+}
+
+@media (max-width: 860px) {
+  .login-section {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+
+/* ══════════════════════════════════════
+   2. LEFT PANEL — BRANDING
+════════════════════════════════════════ */
+.login-left {
+  position: relative;
+  background: linear-gradient(160deg, var(--navy) 0%, #6B1A52 60%, #3D0C2F 100%);
+  padding: 60px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Diagonal grid overlay */
+.login-left-bg {
+  position: absolute;
+  inset: 0;
+  opacity: .05;
+  background-image: repeating-linear-gradient(
+    45deg, var(--gold) 0, var(--gold) 1px,
+    transparent 0, transparent 50%
+  );
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+/* Decorative large cross watermark in bottom-right */
+.login-deco {
+  position: absolute;
+  bottom: -60px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  opacity: .04;
+  background-image:
+    linear-gradient(var(--gold) 0%, var(--gold) 100%),
+    linear-gradient(var(--gold) 0%, var(--gold) 100%);
+  background-size: 40px 100%, 100% 40px;
+  background-position: center, center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.login-left-inner {
+  position: relative;
+  z-index: 1;
+}
+
+/* Church logo mark */
+.login-brand-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--navy);
+  font-family: var(--font-d);
+  font-size: 18px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 4px 20px rgba(201,168,76,.35);
+  border: 3px solid rgba(201,168,76,.3);
+}
+
+.login-brand-name {
+  font-family: var(--font-d);
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+.login-brand-name em { font-style: italic; color: var(--gold); }
+
+.login-brand-tagline {
+  font-size: 12.5px;
+  color: rgba(255,255,255,.5);
+  font-style: italic;
+  margin-bottom: 0;
+}
+
+/* Thin gold horizontal rule */
+.login-divider {
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  border-radius: 1px;
+  margin: 24px 0;
+}
+
+/* Scripture quote */
+.login-scripture {
+  border-left: 2px solid rgba(201,168,76,.4);
+  padding-left: 16px;
+  margin-bottom: 0;
+}
+.login-scripture p {
+  font-size: 13px;
+  color: rgba(255,255,255,.75);
+  font-style: italic;
+  line-height: 1.7;
+  margin-bottom: 6px;
+}
+.login-scripture cite {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-style: normal;
+}
+
+/* Role access panel */
+.login-roles {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r);
+  padding: 16px;
+}
+
+.login-roles-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.login-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.lr-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: rgba(255,255,255,.65);
+}
+.lr-icon { font-size: 14px; }
+
+/* Hide the left panel on mobile (space is too tight) */
+@media (max-width: 860px) {
+  .login-left { display: none; }
+}
+
+
+/* ══════════════════════════════════════
+   3. RIGHT PANEL — FORM CONTAINER
+════════════════════════════════════════ */
+.login-right {
+  background: var(--ivory);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 440px;
+}
+
+/* Mobile-only logo shown when left panel is hidden */
+.login-mobile-logo {
+  display: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: var(--gold);
+  font-family: var(--font-d);
+  font-size: 16px;
+  font-weight: 800;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+@media (max-width: 860px) {
+  .login-mobile-logo { display: flex; }
+  .login-form-wrap   { text-align: center; }
+  .lf-label-row      { justify-content: center; }
+  .lf-remember-row   { justify-content: center; }
+}
+
+.login-form-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.login-form-title {
+  font-family: var(--font-d);
+  font-size: clamp(24px, 4vw, 36px);
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.15;
+  margin-bottom: 10px;
+}
+.login-form-title em { font-style: italic; color: var(--navy-mid); }
+
+.login-form-sub {
+  font-size: 14px;
+  color: var(--text-3);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+
+/* ══════════════════════════════════════
+   4. FORM FIELD COMPONENTS
+   Uses .lf-* prefix (login form) to
+   avoid conflicts with register .rf-*
+════════════════════════════════════════ */
+.lf-group { margin-bottom: 20px; }
+
+/* Label + "Forgot password" row */
+.lf-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.lf-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.lf-label-row .lf-label { margin-bottom: 0; }
+.lf-req { color: var(--gold); }
+
+.lf-forgot {
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 600;
+  transition: color .15s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+}
+.lf-forgot:hover {
+  color: var(--navy);
+  text-decoration-color: var(--navy);
+}
+
+/* Input with icon prefix */
+.lf-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lf-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-3);
+  font-size: 17px;
+  pointer-events: none;
+  transition: color .15s;
+  display: flex;
+  align-items: center;
+}
+
+.lf-input {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r);
+  padding: 13px 14px 13px 44px; /* left padding for icon */
+  font-size: 14.5px;
+  font-family: var(--font-b);
+  color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+  outline: none;
+}
+.lf-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+}
+.lf-input:focus ~ .lf-icon,
+.lf-input-wrap:focus-within .lf-icon {
+  color: var(--gold);
+}
+.lf-input.error  { border-color: var(--red);   box-shadow: 0 0 0 3px rgba(192,57,43,.1); }
+.lf-input.valid  { border-color: var(--green); }
+
+/* Password input — make room for the show/hide button */
+.lf-input--pw { padding-right: 44px; }
+
+/* Show/hide password toggle */
+.lf-pw-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 17px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+}
+.lf-pw-toggle:hover { color: var(--navy); }
+
+/* Inline error message */
+.lf-error {
+  display: block;
+  font-size: 11.5px;
+  color: var(--red);
+  margin-top: 5px;
+  min-height: 16px;
+}
+
+
+/* ══════════════════════════════════════
+   5. REMEMBER ME
+════════════════════════════════════════ */
+.lf-remember-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.lf-remember-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.lf-remember-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0; height: 0;
+}
+
+/* Custom checkbox box */
+.lf-checkbox-box {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-md);
+  border-radius: 5px;
+  background: #fff;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color .15s, background .15s;
+}
+.lf-remember-label input:checked ~ .lf-checkbox-box {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.lf-remember-label input:checked ~ .lf-checkbox-box::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid var(--navy);
+  border-bottom: 2px solid var(--navy);
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
+
+/* ══════════════════════════════════════
+   6. ATTEMPT WARNING BANNER
+   Shown by JS after failed logins.
+════════════════════════════════════════ */
+.lf-attempt-warn {
+  display: none; /* shown by JS */
+  background: rgba(192,57,43,.08);
+  border: 1px solid rgba(192,57,43,.25);
+  border-radius: var(--r);
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--red);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.lf-attempt-warn.visible { display: block; }
+
+
+/* ══════════════════════════════════════
+   7. SUBMIT BUTTON
+════════════════════════════════════════ */
+.lf-submit {
+  width: 100%;
+  background: var(--navy);
+  color: var(--gold);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 15px 24px;
+  border-radius: var(--r);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  margin-bottom: 20px;
+  letter-spacing: .3px;
+}
+.lf-submit:hover {
+  background: var(--navy-mid);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(61,12,47,.2);
+}
+.lf-submit:active  { transform: scale(.98); }
+.lf-submit:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+
+/* ══════════════════════════════════════
+   8. OR DIVIDER
+════════════════════════════════════════ */
+.lf-divider {
+  position: relative;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.lf-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 1px;
+  background: var(--border);
+}
+.lf-divider span {
+  position: relative;
+  background: var(--ivory);
+  padding: 0 12px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+
+/* ══════════════════════════════════════
+   9. REGISTER CTA BUTTON (outline style)
+════════════════════════════════════════ */
+.lf-register-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: transparent;
+  color: var(--navy);
+  font-size: 14.5px;
+  font-weight: 700;
+  padding: 13px 24px;
+  border-radius: var(--r);
+  border: 1.5px solid var(--border-md);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+  margin-bottom: 28px;
+}
+.lf-register-btn:hover {
+  border-color: var(--gold);
+  background: rgba(201,168,76,.06);
+  color: var(--navy);
+}
+
+
+/* ══════════════════════════════════════
+   10. SECURITY NOTE
+════════════════════════════════════════ */
+.lf-security-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.lf-security-note i { color: var(--green); font-size: 15px; flex-shrink: 0; }
+
+@media (max-width: 860px) {
+  .lf-security-note { justify-content: center; text-align: center; }
+  .login-right       { padding: 40px 24px 60px; }
+}

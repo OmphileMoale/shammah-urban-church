@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5C1A47"/>
+      <stop offset="100%" stop-color="#3D0C2F"/>
+    </linearGradient>
+  </defs>
+  <!-- Circle background -->
+  <circle cx="28" cy="28" r="27" fill="url(#g)" stroke="#C9A84C" stroke-width="1.5"/>
+  <!-- Church outline -->
+  <rect x="14" y="30" width="28" height="16" rx="2" fill="#C9A84C" opacity="0.9"/>
+  <!-- Roof -->
+  <polygon points="10,30 28,14 46,30" fill="#C9A84C"/>
+  <!-- Steeple -->
+  <rect x="24" y="6" width="8" height="14" rx="1.5" fill="#C9A84C" opacity="0.85"/>
+  <!-- Cross -->
+  <rect x="27" y="2" width="2.5" height="10" rx="1" fill="white"/>
+  <rect x="24" y="6" width="9" height="2.5" rx="1" fill="white"/>
+  <!-- Door -->
+  <rect x="23" y="34" width="10" height="12" rx="5 5 0 0" fill="#2a0820" opacity="0.8"/>
+</svg>
