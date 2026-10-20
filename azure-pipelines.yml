@@ -1,34 +1,30 @@
+# Azure Pipelines: automated build and test for the CMES website
 trigger:
-  - main
+  branches:
+    include:
+      - main
 
 pool:
-  vmImage: ubuntu-24.04
+  vmImage: ubuntu-latest
 
 steps:
-  - script: |
-      command -v php || sudo apt-get install -y php-cli
-      php -v
-    displayName: Make sure PHP is available
+  - checkout: self
 
   - script: |
+      php --version
+      python3 --version
+    displayName: 'Show tool versions'
+
+  # BUILD: every PHP file must compile without syntax errors
+  - script: |
+      set -e
       find . -name "*.php" -print0 | xargs -0 -n1 php -l
-    displayName: Check every PHP file for syntax errors
+    displayName: 'Build: PHP syntax check (php -l)'
 
-  - task: CopyFiles@2
-    displayName: Collect website files
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        **/*.php
-        **/*.sql
-        css/**
-        js/**
-        assets/**
-        includes/**
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+  # TEST 1: every table has 10+ records, passwords are bcrypt hashes
+  - script: python3 tests/check_database.py
+    displayName: 'Test: database tables and seed data'
 
-  - task: PublishBuildArtifacts@1
-    displayName: Publish website build
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      ArtifactName: 'shammah-website'
+  # TEST 2: nav links, role guard, CSRF, password hashing, login lockout
+  - script: python3 tests/check_site.py
+    displayName: 'Test: site structure and security checks'

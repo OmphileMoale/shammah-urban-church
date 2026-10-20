@@ -10,7 +10,8 @@
    5. If MySQL has a password, update DB_PASS below
 ═══════════════════════════════════════ */
 
-define('DB_HOST', 'localhost');
+define('DB_HOST', '127.0.0.1');
+define('DB_PORT', '3307');      // XAMPP default is 3306; change this if your MySQL uses another port
 define('DB_NAME', 'shammah_db');
 define('DB_USER', 'root');
 define('DB_PASS', '');          // ← change if your MySQL has a password
@@ -18,7 +19,7 @@ define('DB_CHAR', 'utf8mb4');
 
 try {
     $pdo = new PDO(
-        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHAR,
+        "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHAR,
         DB_USER,
         DB_PASS,
         [
@@ -101,16 +102,6 @@ try {
       <li>Scroll down → click <strong>Go</strong></li>
     </ol>
     <div class="note">💡 <code>db_setup.sql</code> is in your <code>shammah-urban-church</code> project folder root.</div>
-
-    <h2>Step 4 — Test Login</h2>
-    <div class="creds">
-      <table>
-        <tr><td>Admin email</td><td><code>admin@shammah.co.za</code></td></tr>
-        <tr><td>Admin password</td><td><code>Admin@2025</code></td></tr>
-        <tr><td>Member email</td><td><code>thabo@email.com</code></td></tr>
-        <tr><td>Member password</td><td><code>Member@2025</code></td></tr>
-      </table>
-    </div>
 
     <h2>If MySQL Has a Password</h2>
     <p style="color:#444;font-size:.9rem">Edit <code>includes/db.php</code> line: <code>define(\'DB_PASS\', \'\');</code> → add your password between the quotes.</p>

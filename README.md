@@ -1,122 +1,71 @@
-# Shammah Urban Church – Setup Instructions
-## Getting the project running in XAMPP + VS Code
+# Shammah Urban Church – CMES Website
 
----
+Church Management and Engagement System (CMES): the website companion to the
+Shammah Urban Church Android app.
+Module XISD6329 · Task 2 · CodeVision Team · Rosebank College (IIE)
 
-### STEP 1: Copy the project folder
+**Team:** Omphile Moale (ST10455873), Oladele Rakgolela (ST10449832), Lebo Ramoshaba (ST10453111)
+**Client:** Shammah Urban Church, Pretoria
 
-1. Open **File Explorer** on your PC
-2. Navigate to: `C:\xampp\htdocs\`
-3. Copy the **entire `shammah` folder** into `htdocs`
-
-Your final path should be:
-```
-C:\xampp\htdocs\shammah\
-```
-
----
-
-### STEP 2: Start XAMPP
-
-1. Open the **XAMPP Control Panel**
-2. Click **Start** next to **Apache**
-3. The status should turn green
-
----
-
-### STEP 3: Open the site
-
-Open your browser and go to:
-```
-http://localhost/shammah/
-```
-
-You should see the Shammah Urban Church home page.
-
----
-
-### STEP 4: Open in VS Code
-
-1. Open VS Code
-2. Click **File → Open Folder**
-3. Navigate to `C:\xampp\htdocs\shammah`
-4. Click **Select Folder**
-
-You can now edit all files. Save a file and refresh the browser to see changes.
-
----
-
-### FILE STRUCTURE EXPLAINED
-
-```
-shammah/
-├── index.php              ← HOME PAGE (start here)
-│
-├── css/
-│   ├── style.css          ← Design tokens (colours) + base reset
-│   ├── nav.css            ← Ticker + navigation bar styles
-│   ├── hero.css           ← Hero section (big headline area)
-│   └── components.css     ← Everything else (stats, events, footer…)
-│
-├── js/
-│   ├── toast.js           ← showToast() notification function
-│   ├── main.js            ← Nav scroll, hamburger, stat counter
-│   └── rsvp.js            ← RSVP button → fetch → rsvp.php
-│
-├── includes/
-│   ├── data.php           ← All page data ($events, $stats, etc.)
-│   ├── header.php         ← <head> tag + CSS links
-│   ├── nav.php            ← Ticker + nav bar HTML
-│   └── footer.php         ← Footer + JS script tags
-│
-└── pages/                 ← (create your other pages here)
-    ├── about.php
-    ├── events.php
-    └── …
-```
-
----
-
-### HOW TO CREATE A NEW PAGE (e.g. about.php)
-
-```php
-<?php
-session_start();
-require_once 'includes/data.php';
-
-$is_logged_in = isset($_SESSION['member_id']);
-$user_name    = $is_logged_in ? htmlspecialchars($_SESSION['member_name'] ?? 'Member') : '';
-$user_role    = $is_logged_in ? ($_SESSION['role'] ?? 'member') : '';
-
-$page_title = 'About Us | Shammah Urban Church';
-$page_desc  = 'Learn about our church history and vision.';
-
-require_once 'includes/header.php';
-require_once 'includes/nav.php';
-?>
-
-<main id="main-content">
-  <!-- your page content here -->
-  <section class="section" style="background:#fff">
-    <div class="section-narrow">
-      <h1 class="section-title">About <em>Our Church</em></h1>
-      <p>Content goes here…</p>
-    </div>
-  </section>
-</main>
-
-<?php require_once 'includes/footer.php'; ?>
-```
-
-That's all you need — the header, nav, and footer load automatically.
-
----
-
-### TROUBLESHOOTING
-
-| Problem | Fix |
+## What is in this repository
+| Part | Technology |
 |---|---|
-| White page, no styles | Check that Apache is running in XAMPP |
-| 404 error | Make sure folder is named `shammah` in `htdocs` |
-| PHP tags showing as text | Confirm URL starts with `http://localhost/` not `file:///` |
-| Fonts not loading | You need an internet connection (fonts load from Google) |
+| Website | PHP 8, MySQL (PDO), HTML, CSS, JavaScript |
+| Android app | Kotlin (separate project, see the user documentation) |
+| Automation | Azure Pipelines (`azure-pipelines.yml`) and `tests/` |
+
+## Features (Task 2)
+- Public pages: Home, About, Events (RSVP), Sermons, Ministries, Give, Prayer Wall, Gallery, Contact, Privacy, Terms
+- Register and login. Passwords are hashed with bcrypt (`password_hash`). Login locks for 15 minutes after 3 failed attempts
+- Role-based access: admin, pastor, member. Admin and pastor use `admin_dashboard.php`, members use `member_portal.php`
+- Admin/Pastor dashboard: key figures, member directory (activate/deactivate), donation report, prayer request approval, contact messages
+- Member portal: profile, RSVPs, donations, volunteering, password change
+- Security: CSRF tokens, prepared statements (PDO), output escaping, session regeneration on login
+
+## Setup (XAMPP on Windows)
+1. Copy this folder to `C:\xampp\htdocs\shammah-urban-church\`
+2. Start **Apache** and **MySQL** in the XAMPP Control Panel
+3. Open http://localhost/phpmyadmin, create a database named `shammah_db`
+4. Import `db_setup.sql` into `shammah_db` (creates all tables and sample data)
+5. If MySQL has a password, set it in `includes/db.php`
+6. Open http://localhost/shammah-urban-church/
+
+## Demo logins (sample data only)
+| Role | Email | Password |
+|---|---|---|
+| Admin | admin@shammah.co.za | Admin@2025 |
+| Pastor | pastor@shammah.co.za | Admin@2025 |
+| Member | thabo@email.com | Member@2025 |
+
+Remove these demo accounts before any real release.
+
+## Database
+14 tables, each with at least 10 sample records:
+MEMBER, ADDRESS, EVENT, RSVP, ATTENDANCE, DONATION, MINISTRY, MINISTRY_MEMBER,
+VOLUNTEER, ANNOUNCEMENT, SERMON, PRAYER_REQUEST, GALLERY, CONTACT_MESSAGE.
+
+## Automated build and tests
+`azure-pipelines.yml` runs on every push to `main`:
+1. **Build:** `php -l` on every PHP file
+2. **Test:** `tests/check_database.py` (10+ records per table, bcrypt hashes)
+3. **Test:** `tests/check_site.py` (nav links, role guard, CSRF, hashing, lockout)
+
+Run locally: `python3 tests/check_database.py && python3 tests/check_site.py`
+
+## Azure DevOps
+- Repos: source control with regular commits from all members
+- Boards: task allocation and progress
+- Pipelines: automated build and test (above)
+
+## Planned for Task 3
+PayFast online payments and recurring giving, annual giving statement, two-factor
+login, email verification, bulk Email/SMS/WhatsApp messaging, QR check-in,
+children's check-in, room booking, visitor follow-up pipeline, reports centre,
+backup and restore, dark mode, multi-language and PWA support.
+The Android app features planned for Task 3 are biometric sign-in, multi-language,
+QR check-in, PayFast, low-data mode, giving statement, reading plans and audit log.
+
+## Known limitations
+- Sermons, Prayer Wall submission and Gallery pages still read from PHP arrays in
+  `includes/data.php`; their database tables are in place and used by the dashboard
+- `install.php` is the older installer; use `db_setup.sql`
