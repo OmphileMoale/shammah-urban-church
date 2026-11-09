@@ -60,10 +60,13 @@ function clearError(input) {
 }
 
 function validateEmail() {
-  const val = emailInput ? emailInput.value.trim() : '';
-  const re  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!re.test(val)) {
-    showError(emailInput, 'Please enter a valid email address.');
+  /* Accepts an email address OR a phone number (071 234 5678 / +27712345678) */
+  const val     = emailInput ? emailInput.value.trim() : '';
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  const digits  = val.replace(/[\s()\-+.]/g, '');
+  const isPhone = /^\d{9,15}$/.test(digits);
+  if (!isEmail && !isPhone) {
+    showError(emailInput, 'Please enter your email address or phone number.');
     return false;
   }
   clearError(emailInput);
@@ -105,6 +108,14 @@ if (passwordInput) {
    Intercepts submit, validates, sends via
    fetch() and handles the JSON response.
 ════════════════════════════════════════ */
+function resetButton() {
+  submitBtn.disabled   = false;
+  btnLabel.textContent = 'Sign In';
+  if (submitBtn.querySelector('i')) {
+    submitBtn.querySelector('i').className = 'ti ti-login';
+  }
+}
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -137,11 +148,23 @@ if (loginForm) {
 
       const data = await response.json();
 
-      if (data.ok) {
+      if (data.ok && data.step === 'code') {
+        /* PASSWORD OK — now the 6-digit code sent to email + phone */
+        resetButton();
+        OtpBox.open({
+          url:     'login.php',
+          csrf:    CSRF_TOKEN,
+          message: data.msg,
+          devCode: data.dev_code,
+          onSuccess: (res) => {
+            if (typeof showToast === 'function') showToast(res.msg, 'success');
+            setTimeout(() => { window.location.href = res.dest ?? 'member_portal.php'; }, 1000);
+          },
+        });
+
+      } else if (data.ok) {
         /* SUCCESS */
         if (typeof showToast === 'function') showToast(data.msg, 'success');
-
-        /* Redirect after 1.2s so user can read the toast */
         setTimeout(() => {
           window.location.href = data.dest ?? 'member_portal.php';
         }, 1200);

@@ -137,8 +137,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Last name must be at least 2 characters.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Please enter a valid email address.';
-    if (strlen($phone) < 10)
-        $errors[] = 'Please enter a valid phone number.';
+    require_once 'includes/auth.php';
+    auth_ensure_schema($pdo);
+    $phone = normalize_phone($phone) ?? '';          // 071 234 5678 → +27712345678 (also used to log in)
+    if ($phone === '')
+        $errors[] = 'Please enter a valid phone number, e.g. 071 234 5678.';
+    elseif (!isset(find_member_by_login($pdo, $phone)['error']))
+        $errors[] = 'That phone number is already linked to another account.';
     if (empty($dob))
         $errors[] = 'Please enter your date of birth.';
     if (empty($gender))
@@ -223,9 +228,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($ok) {
+        /* Send a 6-digit code to the new member's email AND phone.
+           Typing it in (js/otp.js → login.php) confirms both and signs them in. */
+        $email = strtolower($email);
+        $pdo->prepare('UPDATE MEMBER SET email = ? WHERE member_id = ?')->execute([$email, $new_id]);
+        $sent = otp_issue($pdo, find_member_by_login($pdo, $email)['member'], 'register');
+        if (!isset($sent['error'])) {
+            $_SESSION['otp_ticket']   = $sent['ticket'];
+            $_SESSION['otp_remember'] = false;
+        }
         echo json_encode([
-            'ok'  => true,
-            'msg' => "Welcome to Shammah, {$first_name}! Your account has been created. You can now log in.",
+            'ok'       => true,
+            'step'     => isset($sent['error']) ? 'done' : 'code',
+            'msg'      => isset($sent['error'])
+                          ? "Welcome to Shammah, {$first_name}! Your account has been created. You can now log in."
+                          : "Welcome to Shammah, {$first_name}! " . $sent['message'],
+            'dev_code' => $sent['dev_code'] ?? null,
         ]);
     } else {
         echo json_encode(['ok' => false, 'msg' => 'Registration failed. Please try again or contact us for assistance.']);
@@ -839,7 +857,8 @@ require_once 'includes/nav.php';
   const CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 </script>
 
-<!-- register.js loaded before footer.php's scripts -->
-<script src="js/register.js"></script>
+<!-- 6-digit code box; register.js itself is loaded by footer.php -->
+<link rel="stylesheet" href="css/otp.css">
+<script src="js/otp.js"></script>
 
 <?php require_once 'includes/footer.php'; ?>

@@ -34,24 +34,27 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-/* ── TRACK LOGIN ATTEMPTS (brute-force protection) ──
-   After 3 failed attempts the account is locked
-   for 15 minutes. Stored in the session per email.
-──────────────────────────────────────────────────── */
-
 /* ═══════════════════════════════════════
-   FORM HANDLER — POST request
-   Returns JSON so JS can show a toast
-   without a full page reload.
-   
-   SECURITY:
-   – CSRF token verified first (timing-safe)
-   – password_verify() checks bcrypt hash
-   – Brute-force counter stored in session
-   – Plain password NEVER logged or stored
+   FORM HANDLER — POST request (JSON reply)
+
+   Signing in is two steps, the same as in the app:
+     1. action=login   – email OR phone + password.
+                         password_verify() checks the bcrypt hash.
+                         3 wrong passwords = 15 min lock
+                         (login_locked_ – stored in MEMBER.locked_until,
+                          so the lock also applies in the app).
+                         A 6-digit code is then sent to the
+                         member's email AND phone.
+     2. action=verify  – the code is checked and the session starts.
+        action=resend  – sends a new code.
+
+   The code ticket stays in the PHP session; the browser
+   never sees it. The plain password is never logged or stored.
 ═══════════════════════════════════════ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
+    require_once 'includes/auth.php';
+    auth_ensure_schema($pdo);
 
     /* ── CSRF CHECK ──────────────────── */
     $csrf_ok = isset($_POST['csrf'], $_SESSION['csrf_token'])
@@ -61,86 +64,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $email    = trim($_POST['email']    ?? '');
-    $password = $_POST['password']      ?? '';
-    $remember = isset($_POST['remember']);
+    $action = $_POST['action'] ?? 'login';
 
-    /* ── BASIC VALIDATION ────────────── */
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($password) < 1) {
-        echo json_encode(['ok' => false, 'msg' => 'Please enter a valid email address and password.']);
-        exit;
-    }
-
-    /* ── BRUTE-FORCE COUNTER ─────────── */
-    $attempt_key = 'login_attempts_' . md5($email);
-    $lock_key    = 'login_locked_'   . md5($email);
-
-    if (!empty($_SESSION[$lock_key]) && $_SESSION[$lock_key] > time()) {
-        $wait = ceil(($_SESSION[$lock_key] - time()) / 60);
-        echo json_encode(['ok' => false, 'msg' => "Account temporarily locked. Please wait {$wait} minute(s) before trying again."]);
-        exit;
-    }
-
-    /* ── VERIFY CREDENTIALS ─────────── */
-    $stmt = $pdo->prepare('
-        SELECT member_id, first_name, last_name,
-               password_hash, role, is_active
-        FROM   MEMBER
-        WHERE  email = ?
-        LIMIT  1
-    ');
-    $stmt->execute([$email]);
-    $member = $stmt->fetch();
-
-    $valid = $member
-             && !empty($member['is_active'])
-             && password_verify($password, $member['password_hash']);
-
-    if (!$valid) {
-        /* Increment failure counter */
-        $_SESSION[$attempt_key] = ($_SESSION[$attempt_key] ?? 0) + 1;
-        $remaining = max(0, 3 - $_SESSION[$attempt_key]);
-
-        if ($_SESSION[$attempt_key] >= 3) {
-            $_SESSION[$lock_key] = time() + (15 * 60); // lock 15 min
-            unset($_SESSION[$attempt_key]);
-            echo json_encode(['ok' => false, 'msg' => 'Too many failed attempts. Account locked for 15 minutes.']);
-        } else {
-            $plural = $remaining === 1 ? 'attempt' : 'attempts';
-            echo json_encode(['ok' => false, 'msg' => "Invalid email or password. {$remaining} {$plural} remaining before lockout."]);
+    /* ── STEP 2: CHECK THE CODE ──────── */
+    if ($action === 'verify' || $action === 'resend') {
+        $ticket = $_SESSION['otp_ticket'] ?? '';
+        if ($ticket === '') {
+            echo json_encode(['ok' => false, 'msg' => 'Your sign-in expired. Please enter your password again.']);
+            exit;
         }
+        if ($action === 'resend') {
+            $r = otp_resend($pdo, $ticket);
+            echo json_encode(isset($r['error'])
+                ? ['ok' => false, 'msg' => $r['error']]
+                : ['ok' => true, 'msg' => $r['message'], 'dev_code' => $r['dev_code'] ?? null]);
+            exit;
+        }
+        $r = otp_verify($pdo, $ticket, $_POST['code'] ?? '', ['login', 'register']);
+        if (isset($r['error'])) {
+            echo json_encode(['ok' => false, 'msg' => $r['error']]);
+            exit;
+        }
+        $dest = start_web_session($r['member'], !empty($_SESSION['otp_remember']));
+        echo json_encode([
+            'ok'   => true,
+            'msg'  => ($r['purpose'] === 'register' ? 'Welcome to Shammah, ' : 'Welcome back, ')
+                      . htmlspecialchars($r['member']['first_name']) . '! Redirecting…',
+            'dest' => $dest,
+        ]);
         exit;
     }
 
-    /* ── SUCCESS — SET SESSION ─────── */
-    unset($_SESSION[$attempt_key], $_SESSION[$lock_key]);
-    session_regenerate_id(true); // prevent session fixation
+    /* ── STEP 1: EMAIL/PHONE + PASSWORD ─ */
+    $login    = trim($_POST['login'] ?? $_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    $_SESSION['member_id']   = $member['member_id'];
-    $_SESSION['member_name'] = htmlspecialchars($member['first_name'] . ' ' . $member['last_name']);
-    $_SESSION['role']        = $member['role'] ?? 'member';
-
-    /* Remember me — extend cookie lifetime to 30 days */
-    if ($remember) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), session_id(), [
-            'expires'  => time() + (30 * 24 * 60 * 60),
-            'path'     => $params['path'],
-            'domain'   => $params['domain'],
-            'secure'   => $params['secure'],
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
+    if ($login === '' || strlen($password) < 1) {
+        echo json_encode(['ok' => false, 'msg' => 'Please enter your email or phone number and your password.']);
+        exit;
     }
 
-    $dest = ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'pastor')
-            ? 'admin_dashboard.php'
-            : 'member_portal.php';
+    $r = check_password_login($pdo, $login, $password);   // password_verify() + login_locked_ rules
+    if (isset($r['error'])) {
+        echo json_encode(['ok' => false, 'msg' => $r['error']]);
+        exit;
+    }
+
+    $sent = otp_issue($pdo, $r['member'], 'login');
+    if (isset($sent['error'])) {
+        echo json_encode(['ok' => false, 'msg' => $sent['error']]);
+        exit;
+    }
+    $_SESSION['otp_ticket']   = $sent['ticket'];
+    $_SESSION['otp_remember'] = isset($_POST['remember']);
 
     echo json_encode([
-        'ok'   => true,
-        'msg'  => 'Welcome back, ' . htmlspecialchars($member['first_name']) . '! Redirecting…',
-        'dest' => $dest,
+        'ok'       => true,
+        'step'     => 'code',
+        'msg'      => $sent['message'],
+        'dev_code' => $sent['dev_code'] ?? null,
     ]);
     exit;
 }
@@ -153,6 +135,7 @@ require_once 'includes/header.php';
 require_once 'includes/nav.php';
 ?>
 <link rel="stylesheet" href="css/login.css">
+<link rel="stylesheet" href="css/otp.css">
 
 <main id="main-content">
 
@@ -229,15 +212,15 @@ require_once 'includes/nav.php';
           <!-- Email field -->
           <div class="lf-group">
             <label class="lf-label" for="lf-email">
-              Email Address <span class="lf-req" aria-hidden="true">*</span>
+              Email or Phone Number <span class="lf-req" aria-hidden="true">*</span>
             </label>
             <div class="lf-input-wrap">
               <span class="lf-icon" aria-hidden="true">
-                <i class="ti ti-mail"></i>
+                <i class="ti ti-user"></i>
               </span>
-              <input class="lf-input" type="email" id="lf-email" name="email"
-                     placeholder="thabo@email.com"
-                     autocomplete="email"
+              <input class="lf-input" type="text" id="lf-email" name="login"
+                     placeholder="thabo@email.com or 071 234 5678"
+                     autocomplete="username"
                      required
                      aria-required="true"
                      aria-describedby="lf-email-err">
@@ -315,8 +298,9 @@ require_once 'includes/nav.php';
         <!-- Security note -->
         <p class="lf-security-note">
           <i class="ti ti-shield-lock" aria-hidden="true"></i>
-          Your login is protected by bcrypt encryption and CSRF tokens.
-          Accounts lock after 3 failed attempts.
+          Your login is protected by bcrypt encryption, CSRF tokens and a
+          6-digit code sent to your email and phone. Accounts lock after 3 failed attempts.
+          The same account works in the Shammah app.
         </p>
 
       </div>
@@ -330,6 +314,7 @@ require_once 'includes/nav.php';
 <script>
   const CSRF_TOKEN = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 </script>
+<script src="js/otp.js"></script>
 <script src="js/login.js"></script>
 
 <?php require_once 'includes/footer.php'; ?>

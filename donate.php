@@ -50,6 +50,7 @@ if (empty($_SESSION['csrf_token'])) {
    see your code "think" about the user.
 ═══════════════════════════════════════════════════ */
 $is_logged_in = isset($_SESSION['member_id']);
+$user_role    = $is_logged_in ? ($_SESSION['role'] ?? 'member') : '';
 $member_name  = $is_logged_in ? htmlspecialchars($_SESSION['member_name'] ?? '') : '';
 $member_id    = $is_logged_in ? (int) $_SESSION['member_id'] : 0;
 
@@ -73,7 +74,7 @@ $member_id    = $is_logged_in ? (int) $_SESSION['member_id'] : 0;
    Client-side JS validation is just UX — server-side
    is actual security.
 ═══════════════════════════════════════════════════ */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     header('Content-Type: application/json');
 
     /* ── CHECK 1: CSRF ── */
@@ -292,7 +293,7 @@ require_once 'includes/nav.php';
      ─────────────────────────────────────────
      DISTINCTION FEATURE 5 in HTML form.
      
-     data-pct="<?= $pct ?>" is read by donate.js
+    The data-pct attribute is read by donate.js
      which animates the bar from 0% → $pct% on
      scroll using IntersectionObserver.
      
@@ -811,7 +812,7 @@ require_once 'includes/nav.php';
   /*
    * json_encode() converts PHP values to valid JS values.
    * This is the safe way to pass server data to the browser.
-   * Never use <?= $variable ?> directly inside a <script>.
+  * Never interpolate raw PHP variables directly inside a <script>.
    */
   const IS_LOGGED_IN = <?= json_encode($is_logged_in) ?>;
   const CSRF_TOKEN   = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;

@@ -7,13 +7,14 @@
    2. require_once      – loads shared files
    3. FORM HANDLING     – processes POST submission
                           validates fields, sends email
-                          via PHP mail(), returns JSON
+                          via Gmail SMTP, returns JSON
    4. HTML sections     – Contact page body
    5. footer.php        – footer, floating buttons, JS
 ═══════════════════════════════════════ */
 session_start();
 
 require_once 'includes/data.php';
+require_once 'includes/notify.php';
 
 /* ── AUTH STATE ─────────────────────── */
 $is_logged_in = isset($_SESSION['member_id']);
@@ -36,7 +37,7 @@ $user_role    = $is_logged_in ? ($_SESSION['role'] ?? 'member') : '';
    If they don't match, we reject the request
    to prevent cross-site forgery attacks.
 ═══════════════════════════════════════ */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
     // Tell the browser we're returning JSON
     header('Content-Type: application/json');
@@ -46,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        hash_equals() is timing-safe (prevents timing attacks).
     ──────────────────────────────────── */
     $csrf_ok = isset($_POST['csrf'], $_SESSION['csrf_token'])
+           && is_string($_POST['csrf'])
                && hash_equals($_SESSION['csrf_token'], $_POST['csrf']);
     if (!$csrf_ok) {
         echo json_encode(['ok' => false, 'msg' => 'Security token mismatch. Please refresh the page.']);
@@ -54,14 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* ── SANITISE INPUTS ────────────────
        trim()            – removes leading/trailing whitespace
-       htmlspecialchars()– converts < > & " to safe HTML entities
-       filter_var()      – validates email format
+      filter_var()      – validates email format
     ──────────────────────────────────── */
-    $name    = trim(htmlspecialchars($_POST['name']    ?? ''));
-    $email   = trim(htmlspecialchars($_POST['email']   ?? ''));
-    $subject = trim(htmlspecialchars($_POST['subject'] ?? ''));
-    $message = trim(htmlspecialchars($_POST['message'] ?? ''));
-    $phone   = trim(htmlspecialchars($_POST['phone']   ?? ''));
+    $read_post = static function (string $key): string {
+      $value = $_POST[$key] ?? '';
+      return is_string($value) ? trim($value) : '';
+    };
+    $name    = $read_post('name');
+    $email   = $read_post('email');
+    $subject = $read_post('subject');
+    $message = $read_post('message');
+    $phone   = $read_post('phone');
 
     /* ── SERVER-SIDE VALIDATION ─────────
        Always validate on the server even
@@ -69,10 +74,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
        bypassed by anyone with dev tools.
     ──────────────────────────────────── */
     $errors = [];
-    if (strlen($name)    < 2)                        $errors[] = 'Please enter your full name.';
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL))  $errors[] = 'Please enter a valid email address.';
-    if (empty($subject))                             $errors[] = 'Please select a subject.';
-    if (strlen($message) < 10)                       $errors[] = 'Your message must be at least 10 characters.';
+    $allowed_subjects = [
+      'General Enquiry', 'Membership', 'Events & RSVP', 'Prayer Request',
+      'Pastoral Care', 'Volunteering', 'Donations & Giving', 'Media & Sermons',
+    ];
+    $name_length = function_exists('mb_strlen') ? mb_strlen($name, 'UTF-8') : strlen($name);
+    $message_length = function_exists('mb_strlen') ? mb_strlen($message, 'UTF-8') : strlen($message);
+    if ($name_length < 2 || $name_length > 80)              $errors[] = 'Please enter your name (2–80 characters).';
+    if (strlen($email) > 120 || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email address.';
+    if (!in_array($subject, $allowed_subjects, true))       $errors[] = 'Please select a valid subject.';
+    if ($message_length < 10 || $message_length > 500)      $errors[] = 'Your message must be between 10 and 500 characters.';
+    if (strlen($phone) > 30)                                $errors[] = 'Please enter a valid phone number.';
 
     if (!empty($errors)) {
         echo json_encode(['ok' => false, 'msg' => implode(' ', $errors)]);
@@ -80,27 +92,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     /* ── SEND EMAIL ─────────────────────
-       In production, replace the $sent = true
-       line with a real mail() call:
-       
-       $to      = 'info@shammahurbanchurch.co.za';
-       $headers = "From: {$name} <{$email}>\r\n"
-                . "Reply-To: {$email}\r\n"
-                . "Content-Type: text/plain; charset=UTF-8\r\n";
-       $body    = "Name: {$name}\nPhone: {$phone}\n\n{$message}";
-       $sent    = mail($to, "[Contact Form] {$subject}", $body, $headers);
-       
-       For now we simulate success so you
-       can test the UI without an SMTP server.
+       Send every valid contact submission to the configured church inbox.
+       SMTP credentials are kept outside the repository in Apache's environment.
     ──────────────────────────────────── */
-    $sent = true; // ← replace with real mail() above
+    $body = "A new message was submitted through the church contact form.\n\n"
+          . "Name: {$name}\n"
+          . "Email: {$email}\n"
+          . 'Phone: ' . ($phone !== '' ? $phone : 'Not provided') . "\n"
+          . "Subject: {$subject}\n\n"
+          . "Message:\n{$message}\n";
+    $sent = send_email(CONTACT_EMAIL, '[Contact Form] ' . $subject, $body, $email);
 
     if ($sent) {
-        // Log to session for demo — in production write to DB:
-        // INSERT INTO CONTACT_LOG (name, email, subject, message, submitted_at) VALUES (...)
-        echo json_encode(['ok' => true, 'msg' => "Thank you {$name}! Your message has been sent. We'll be in touch within 24 hours."]);
+        echo json_encode(['ok' => true, 'msg' => "Thank you {$name}! Your message has been emailed successfully. We'll be in touch within 24 hours."]);
     } else {
-        echo json_encode(['ok' => false, 'msg' => 'Sorry, we could not send your message right now. Please call or WhatsApp us directly.']);
+        http_response_code(503);
+        echo json_encode(['ok' => false, 'msg' => 'Your message could not be emailed right now. Please call or WhatsApp us directly, or try again later.']);
     }
     exit;
 }
@@ -222,13 +229,13 @@ require_once 'includes/nav.php';
         </a>
 
         <!-- Email -->
-        <a href="mailto:info@shammahurbanchurch.co.za" class="cq-item" aria-label="Email us">
+        <a href="mailto:babatundesaliu19@gmail.com" class="cq-item" aria-label="Email us">
           <div class="cq-icon" aria-hidden="true">
             <i class="ti ti-mail"></i>
           </div>
           <div class="cq-text">
             <strong>Email Us</strong>
-            <span>info@shammahurbanchurch.co.za</span>
+            <span>babatundesaliu19@gmail.com</span>
             <small>We reply within 24 hours</small>
           </div>
         </a>
@@ -396,8 +403,8 @@ require_once 'includes/nav.php';
             <div class="ci-icon" aria-hidden="true">✉️</div>
             <h4>Email</h4>
             <p>
-              <a href="mailto:info@shammahurbanchurch.co.za">
-                info@shammahurbanchurch.co.za
+              <a href="mailto:babatundesaliu19@gmail.com">
+                babatundesaliu19@gmail.com
               </a><br>
               Replies within 24 hours
             </p>

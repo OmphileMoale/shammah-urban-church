@@ -441,13 +441,27 @@ if (registerForm) {
 
       if (data.ok) {
         /* SUCCESS */
-        if (typeof showToast === 'function') showToast(data.msg, 'success');
-
-        // Redirect to login after a short delay so
-        // the user can read the success toast
-        setTimeout(() => {
-          window.location.href = 'login.php';
-        }, 2500);
+        if (data.step === 'code' && typeof OtpBox !== 'undefined') {
+          /* Account created — confirm the code sent to email + phone, then go to the portal */
+          OtpBox.open({
+            url:     'login.php',
+            csrf:    CSRF_TOKEN,
+            message: data.msg,
+            devCode: data.dev_code,
+            onSuccess: (res) => {
+              if (typeof showToast === 'function') showToast(res.msg, 'success');
+              setTimeout(() => { window.location.href = res.dest ?? 'member_portal.php'; }, 1000);
+            },
+            onCancel: () => { window.location.href = 'login.php'; },
+          });
+        } else {
+          if (typeof showToast === 'function') showToast(data.msg, 'success');
+          // Redirect to login after a short delay so
+          // the user can read the success toast
+          setTimeout(() => {
+            window.location.href = 'login.php';
+          }, 2500);
+        }
 
         // Reset the form and clear all states
         registerForm.reset();

@@ -1,0 +1,5 @@
+# Shammah Urban Church — keep private files off the web
+# (config copies, notes, SQL dumps, logs and the saved Gmail App Password)
+<FilesMatch "(?i)(^httpd\.conf|\.(txt|md|sql|log|ini|bak|yml|py)$|^smtp_secret\.php$)">
+    Require all denied
+</FilesMatch>

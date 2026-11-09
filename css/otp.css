@@ -1,0 +1,132 @@
+/* ═══════════════════════════════════════
+   css/otp.css — "Enter your 6-digit code" box (js/otp.js)
+═══════════════════════════════════════ */
+.otp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(40, 8, 32, .62);
+  backdrop-filter: blur(3px);
+}
+
+.otp-box {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px 28px 24px;
+  background: #fff;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  font-family: var(--font-b);
+}
+
+.otp-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold-pale);
+  color: var(--navy);
+  font-size: 28px;
+}
+
+.otp-title {
+  font-family: var(--font-d);
+  color: var(--navy);
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+}
+
+.otp-msg {
+  color: var(--text);
+  opacity: .8;
+  font-size: .92rem;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.otp-msg--dev { color: var(--red); opacity: 1; font-weight: 500; }
+
+.otp-form { text-align: left; }
+
+.otp-label {
+  display: block;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.otp-input,
+.otp-form .otp-extra {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r);
+  font-family: var(--font-m);
+  font-size: 1rem;
+  outline: none;
+  margin-bottom: 12px;
+}
+
+.otp-form .otp-extra { font-family: var(--font-b); font-size: .95rem; }
+
+.otp-input {
+  font-size: 1.6rem;
+  letter-spacing: .5em;
+  text-align: center;
+}
+
+.otp-input:focus,
+.otp-form .otp-extra:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, .2);
+}
+
+.otp-error {
+  min-height: 1.2em;
+  color: var(--red);
+  font-size: .85rem;
+  margin-bottom: 10px;
+}
+
+.otp-verify {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: var(--r);
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--font-b);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.otp-verify:hover    { background: var(--navy-mid); }
+.otp-verify:disabled { opacity: .6; cursor: wait; }
+
+.otp-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.otp-link {
+  background: none;
+  border: none;
+  color: var(--navy);
+  font-family: var(--font-b);
+  font-size: .88rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.otp-link:disabled { opacity: .5; cursor: wait; }
