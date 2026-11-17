@@ -34,6 +34,12 @@
 session_start();
 require_once 'includes/data.php';
 
+/* Real numbers come from the database. If MySQL is down the page still opens
+   (with zeros) instead of showing made-up numbers. */
+$GLOBALS['DB_SOFT_FAIL'] = true;
+require_once 'includes/db.php';
+$GLOBALS['DB_SOFT_FAIL'] = false;
+
 /* ── AUTH STATE ─────────────────────────
    Three different states drive what the
    visitor sees on this page.
@@ -210,34 +216,80 @@ $cell_groups = [
   ['name' => 'Brooklyn Bible Circle',    'suburb' => 'Brooklyn',     'day' => 'Fridays',     'time' => '6:30 PM', 'leader' => 'Zanele D.',  'spots' => 1],
 ];
 
-/* ── JOINED MINISTRY IDs ────────────────
-   Simulated with session data. In production
-   replace with a DB query:
-   SELECT MinistryID FROM MINISTRY_MEMBER
-   WHERE MemberID = :id AND IsActive = 1
+/* ── LIVE NUMBERS FROM THE DATABASE ─────
+   Nothing below is typed in by hand:
+   • member_count   → active members linked to the ministry (MINISTRY_MEMBER)
+   • $total_members → each member counted once, even if in several ministries
+   • $joined_ids    → the ministries the logged-in member has joined
+   • ministries     → the active rows of the MINISTRY table, so a ministry added
+                      or switched off in the database shows up here too
+   The Join / Leave buttons save to MINISTRY_MEMBER through ministry_join.php,
+   so these numbers change as people join.
 ──────────────────────────────────────── */
-$joined_ids = $is_logged_in
-    ? ($_SESSION['joined_ministries'] ?? [])
-    : [];
+$total_members = 0;
+$joined_ids    = [];
+foreach ($ministries_full as $k => $row) { $ministries_full[$k]['member_count'] = 0; }
 
-/* ── KPI STATS ──────────────────────────
-   Computed from $ministries_full.
-   In production these come from DB aggregates.
-──────────────────────────────────────── */
-$total_members     = array_sum(array_column($ministries_full, 'member_count'));
+if (isset($pdo) && $pdo instanceof PDO) {
+    try {
+        // which ministries are active, and any that are only in the database
+        $db_min = $pdo->query('SELECT ministry_id, name, category, icon, color, leader, schedule, desc_short, desc_full, testimonial
+                               FROM MINISTRY WHERE is_active = 1 ORDER BY ministry_id')->fetchAll();
+        $active_ids = array_map('intval', array_column($db_min, 'ministry_id'));
+        $ministries_full = array_values(array_filter($ministries_full, function ($m) use ($active_ids) {
+            return in_array($m['id'], $active_ids, true);
+        }));
+        $have = array_column($ministries_full, 'id');
+        foreach ($db_min as $r) {
+            if (in_array((int) $r['ministry_id'], $have, true)) continue;
+            $ministries_full[] = [
+                'id' => (int) $r['ministry_id'], 'name' => $r['name'], 'category' => $r['category'],
+                'icon' => $r['icon'], 'color' => $r['color'], 'leader' => $r['leader'], 'schedule' => $r['schedule'],
+                'desc_short' => $r['desc_short'], 'desc_full' => $r['desc_full'] ?: $r['desc_short'],
+                'member_count' => 0, 'next_event' => 'See upcoming events', 'next_date' => '',
+                'testimonial' => (string) $r['testimonial'],
+            ];
+        }
+
+        // members per ministry (only active members, only active links)
+        $rows = $pdo->query('SELECT mm.ministry_id, COUNT(*) AS c
+                             FROM MINISTRY_MEMBER mm JOIN MEMBER m ON m.member_id = mm.member_id
+                             WHERE mm.is_active = 1 AND m.is_active = 1 GROUP BY mm.ministry_id')->fetchAll();
+        $counts = array_column($rows, 'c', 'ministry_id');
+        foreach ($ministries_full as $k => $row) { $ministries_full[$k]['member_count'] = (int) ($counts[$row['id']] ?? 0); }
+
+        // members serving (each person once)
+        $total_members = (int) $pdo->query('SELECT COUNT(DISTINCT mm.member_id)
+                                            FROM MINISTRY_MEMBER mm JOIN MEMBER m ON m.member_id = mm.member_id
+                                            WHERE mm.is_active = 1 AND m.is_active = 1')->fetchColumn();
+
+        // what this member has joined
+        if ($is_logged_in) {
+            $st = $pdo->prepare('SELECT ministry_id FROM MINISTRY_MEMBER WHERE member_id = ? AND is_active = 1');
+            $st->execute([(int) $member_id]);
+            $joined_ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+        }
+    } catch (Throwable $e) {
+        error_log('Shammah ministries numbers failed: ' . $e->getMessage());
+    }
+}
+
 $total_ministries  = count($ministries_full);
 $total_groups      = count($cell_groups);
 $most_active       = array_reduce($ministries_full, function($carry, $m) {
     return (!$carry || $m['member_count'] > $carry['member_count']) ? $m : $carry;
-});
+}) ?? ['name' => '—', 'member_count' => 0];
 
 /* ── PAGE META ──────────────────────────  */
 $page_title = 'Ministries | Shammah Urban Church';
-$page_desc  = 'Discover all 8 active ministries at Shammah Urban Church in Pretoria — join a ministry, find your cell group, and serve your community.';
+$page_desc  = 'Discover all ' . $total_ministries . ' active ministries at Shammah Urban Church in Pretoria — join a ministry, find your cell group, and serve your community.';
 
 require_once 'includes/header.php';
 require_once 'includes/nav.php';
 ?>
+
+<!-- FIX: this page's own stylesheet (header.php does not load it) -->
+<link rel="stylesheet" href="css/ministries.css">
 
 <!-- ══════════════ PAGE MAIN ══════════════ -->
 <main id="main-content">
@@ -262,7 +314,7 @@ require_once 'includes/nav.php';
       <!-- Hero KPI strip -->
       <div class="min-hero-stats" aria-label="Ministry statistics">
         <div class="hero-stat">
-          <strong><?= $total_members ?>+</strong>
+          <strong><?= (int) $total_members ?></strong>
           <span>Ministry Members</span>
         </div>
         <div class="hero-stat-divider" aria-hidden="true"></div>
@@ -303,7 +355,7 @@ require_once 'includes/nav.php';
       <div class="min-kpi-card">
         <i class="ti ti-trophy" aria-hidden="true"></i>
         <div class="min-kpi-body">
-          <span class="min-kpi-val"><?= htmlspecialchars($most_active['name']) ?></span>
+          <span class="min-kpi-val"><?= $most_active['member_count'] > 0 ? htmlspecialchars($most_active['name']) : '—' ?></span>
           <span class="min-kpi-lbl">Most Active Ministry</span>
         </div>
       </div>
@@ -482,7 +534,7 @@ require_once 'includes/nav.php';
           <!-- Next event strip -->
           <div class="min-next-event">
             <i class="ti ti-calendar-event" aria-hidden="true"></i>
-            <span>Next: <strong><?= htmlspecialchars($m['next_event']) ?></strong> · <?= $m['next_date'] ?></span>
+            <span>Next: <strong><?= htmlspecialchars($m['next_event']) ?></strong><?= $m['next_date'] !== '' ? ' · ' . htmlspecialchars($m['next_date']) : '' ?></span>
             <a href="events.php" class="min-rsvp-link" aria-label="RSVP for <?= $safe_name ?> next event">RSVP</a>
           </div>
 
@@ -497,11 +549,13 @@ require_once 'includes/nav.php';
               <!-- Full description -->
               <p class="min-detail-desc"><?= htmlspecialchars($m['desc_full']) ?></p>
 
-              <!-- Member testimonial quote -->
+              <!-- Member testimonial quote (only when there is one) -->
+              <?php if ($m['testimonial'] !== ''): ?>
               <blockquote class="min-testimonial">
                 <i class="ti ti-quote" aria-hidden="true"></i>
                 <?= htmlspecialchars($m['testimonial']) ?>
               </blockquote>
+              <?php endif; ?>
 
             </div>
           </div>
@@ -735,5 +789,7 @@ require_once 'includes/nav.php';
   const IS_LOGGED_IN = <?= json_encode($is_logged_in) ?>;
   const CSRF_TOKEN   = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 </script>
+<!-- FIX: this page's own script (footer.php does not load it) -->
+<script src="js/ministries.js"></script>
 
 <?php require_once 'includes/footer.php'; ?>
