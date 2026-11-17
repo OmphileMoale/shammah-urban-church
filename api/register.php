@@ -1,8 +1,8 @@
 <?php
 /* POST api/register.php
    { name | first_name + last_name, email, phone, password }
-   Creates the account in MEMBER (same table as the website) and
-   sends a 6-digit code to the email AND phone.
+   Sends a 6-digit code to the email AND phone. The account is only created in MEMBER
+   (same table as the website) after verify_code.php gets the correct code.
    Reply: { ok, ticket, sent_to, msg }  → then call verify_code.php */
 require __DIR__ . '/_bootstrap.php';
 api_method('POST');
@@ -30,9 +30,11 @@ if (!isset(find_member_by_login($pdo, $phone)['error'])) {
     api_fail('This phone number is already linked to another account.', 409);
 }
 
-$pdo->prepare('INSERT INTO MEMBER (first_name, last_name, email, phone, password_hash, role, is_active, created_at)
-               VALUES (?, ?, ?, ?, ?, "member", 1, NOW())')
-    ->execute([$first, $last !== '' ? $last : '-', $email, $phone, password_hash($pass, PASSWORD_BCRYPT)]);
-
-$m = find_member_by_login($pdo, $email)['member'];
-api_code_sent(otp_issue($pdo, $m, 'register'));
+/* The account is NOT created yet. The details wait in PENDING_REGISTRATION and the member is
+   only saved after verify_code.php receives the correct 6-digit code. */
+api_code_sent(pending_issue($pdo, [
+    'title' => '', 'first_name' => $first, 'last_name' => $last !== '' ? $last : '-',
+    'email' => $email, 'phone' => $phone, 'dob' => '', 'gender' => '', 'mem_type' => '',
+    'street' => '', 'city' => '', 'postal' => '', 'ministries' => [],
+    'password_hash' => password_hash($pass, PASSWORD_BCRYPT),
+]));

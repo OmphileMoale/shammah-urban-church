@@ -20,6 +20,7 @@ session_start();
 
 require_once 'includes/data.php';
 require_once 'includes/db.php';
+$stats = shammah_live_stats($stats);   // real member count for the hero text
 
 /* ── REDIRECT IF ALREADY LOGGED IN ────
    No need to register again.
@@ -42,6 +43,23 @@ $user_role    = '';
 
 
 /* ═══════════════════════════════════════
+   EMAIL DOMAIN CHECK
+   True if the part after @ can receive mail
+   (has MX or A record). Fails OPEN if DNS
+   itself is unreachable, so an offline server
+   never blocks real people.
+═══════════════════════════════════════ */
+function email_domain_ok(string $email): bool {
+    $domain = substr(strrchr($email, '@'), 1);
+    if ($domain === '' || !function_exists('checkdnsrr')) return true;
+    $domain = rtrim($domain, '.') . '.';
+    if (checkdnsrr($domain, 'MX') || checkdnsrr($domain, 'A')) return true;
+    // Is DNS working at all? If not, don't punish the visitor.
+    if (!checkdnsrr('google.com.', 'A')) return true;
+    return false;
+}
+
+/* ═══════════════════════════════════════
    AJAX — EMAIL DUPLICATE CHECK
    Called by register.js on blur of the
    email field: fetch('register.php?check_email=1&email=...')
@@ -60,6 +78,11 @@ if (isset($_GET['check_email'])) {
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo json_encode(['available' => false, 'msg' => 'Invalid email format.']);
+        exit;
+    }
+
+    if (!email_domain_ok($email)) {
+        echo json_encode(['available' => false, 'msg' => 'That email domain does not exist. Please check for typos.']);
         exit;
     }
 
@@ -137,6 +160,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Last name must be at least 2 characters.';
     if (!filter_var($email, FILTER_VALIDATE_EMAIL))
         $errors[] = 'Please enter a valid email address.';
+    elseif (!email_domain_ok($email))
+        $errors[] = 'We could not use that email because the domain "' . substr(strrchr($email, '@'), 1) . '" does not exist. Please check for typos.';
     require_once 'includes/auth.php';
     auth_ensure_schema($pdo);
     $phone = normalize_phone($phone) ?? '';          // 071 234 5678 → +27712345678 (also used to log in)
@@ -173,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     /* ── CHECK EMAIL UNIQUENESS ─────── */
+    $email = strtolower($email);
     $chk = $pdo->prepare('SELECT 1 FROM MEMBER WHERE email = ? LIMIT 1');
     $chk->execute([$email]);
     $email_taken = (bool) $chk->fetchColumn();
@@ -185,69 +211,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /* ── HASH PASSWORD ──────────────── */
     $hashed = password_hash($password, PASSWORD_BCRYPT);
 
-    /* ── INSERT TO DATABASE ─────────── */
-    $ok = false;
-    try {
-        $pdo->beginTransaction();
-
-        $ins = $pdo->prepare('
-            INSERT INTO MEMBER
-              (title, first_name, last_name, email, phone,
-               date_of_birth, gender, membership_type,
-               password_hash, role, is_active, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "member", 1, NOW())
-        ');
-        $ins->execute([
-            $title, $first_name, $last_name, $email, $phone,
-            $dob, $gender, $mem_type, $hashed,
-        ]);
-        $new_id = (int) $pdo->lastInsertId();
-
-        $ins2 = $pdo->prepare('
-            INSERT INTO ADDRESS (member_id, street, city, postal_code)
-            VALUES (?, ?, ?, ?)
-        ');
-        $ins2->execute([$new_id, $street, $city, $postal]);
-
-        foreach ($ministries as $ministry) {
-            $m = trim(htmlspecialchars($ministry));
-            if ($m) {
-                $ins3 = $pdo->prepare('
-                    INSERT INTO VOLUNTEER (member_id, ministry_name, status)
-                    VALUES (?, ?, "interested")
-                ');
-                $ins3->execute([$new_id, $m]);
-            }
-        }
-
-        $pdo->commit();
-        $ok = true;
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        $ok = false;
+    /* ── DO NOT SAVE THE MEMBER YET ─────
+       The details wait in PENDING_REGISTRATION. A 6-digit code is sent to
+       the email AND phone. The account is only created in MEMBER after the
+       correct code is typed in (js/otp.js → login.php → pending_verify()).
+       A wrong email or an unused code never becomes a member.        */
+    $ministry_list = [];
+    foreach ((array) $ministries as $ministry) {
+        $m = trim(htmlspecialchars((string) $ministry));
+        if ($m !== '') $ministry_list[] = $m;
     }
 
-    if ($ok) {
-        /* Send a 6-digit code to the new member's email AND phone.
-           Typing it in (js/otp.js → login.php) confirms both and signs them in. */
-        $email = strtolower($email);
-        $pdo->prepare('UPDATE MEMBER SET email = ? WHERE member_id = ?')->execute([$email, $new_id]);
-        $sent = otp_issue($pdo, find_member_by_login($pdo, $email)['member'], 'register');
-        if (!isset($sent['error'])) {
-            $_SESSION['otp_ticket']   = $sent['ticket'];
-            $_SESSION['otp_remember'] = false;
-        }
-        echo json_encode([
-            'ok'       => true,
-            'step'     => isset($sent['error']) ? 'done' : 'code',
-            'msg'      => isset($sent['error'])
-                          ? "Welcome to Shammah, {$first_name}! Your account has been created. You can now log in."
-                          : "Welcome to Shammah, {$first_name}! " . $sent['message'],
-            'dev_code' => $sent['dev_code'] ?? null,
-        ]);
-    } else {
-        echo json_encode(['ok' => false, 'msg' => 'Registration failed. Please try again or contact us for assistance.']);
+    $sent = pending_issue($pdo, [
+        'title' => $title, 'first_name' => $first_name, 'last_name' => $last_name,
+        'email' => $email, 'phone' => $phone, 'dob' => $dob, 'gender' => $gender,
+        'mem_type' => $mem_type, 'street' => $street, 'city' => $city, 'postal' => $postal,
+        'ministries' => $ministry_list, 'password_hash' => $hashed,
+    ]);
+
+    if (isset($sent['error'])) {
+        echo json_encode(['ok' => false, 'msg' => $sent['error']]);
+        exit;
     }
+
+    $_SESSION['otp_ticket']   = $sent['ticket'];
+    $_SESSION['otp_remember'] = false;
+    echo json_encode([
+        'ok'       => true,
+        'step'     => 'code',
+        'msg'      => "Almost there, {$first_name}! " . $sent['message'] . ' Your account is created once you enter the code.',
+        'dev_code' => $sent['dev_code'] ?? null,
+    ]);
     exit;
 }
 
@@ -286,7 +280,7 @@ require_once 'includes/nav.php';
       <div class="hero-eyebrow">Welcome to the Family</div>
       <h1>Create Your <em>Account</em></h1>
       <p class="reg-hero-sub">
-        Join over 512 members in our digital community — RSVP to events,
+        Join our community of <?= (int) $stats['members'] ?> members — RSVP to events,
         access sermons, and connect with your ministry.
       </p>
       <div class="hero-btns">
