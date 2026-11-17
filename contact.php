@@ -101,9 +101,28 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
           . 'Phone: ' . ($phone !== '' ? $phone : 'Not provided') . "\n"
           . "Subject: {$subject}\n\n"
           . "Message:\n{$message}\n";
+    /* Basic anti-spam: one message per visitor session every 30 seconds */
+    if (isset($_SESSION['last_contact_at']) && time() - (int) $_SESSION['last_contact_at'] < 30) {
+        http_response_code(429);
+        echo json_encode(['ok' => false, 'msg' => 'Please wait a few seconds before sending another message.']);
+        exit;
+    }
+
+    // 1) the church inbox gets the message (Reply-To = the visitor's own email)
     $sent = send_email(CONTACT_EMAIL, '[Contact Form] ' . $subject, $body, $email);
 
     if ($sent) {
+        $_SESSION['last_contact_at'] = time();
+
+        // 2) the visitor gets a confirmation copy at WHATEVER email they typed.
+        //    If this one fails the message was still delivered, so we ignore it.
+        $copy = "Hi {$name},\n\n"
+              . "Thank you for contacting Shammah Urban Church. We have received your message and will reply within 24 hours.\n\n"
+              . "Subject: {$subject}\n"
+              . "Your message:\n{$message}\n\n"
+              . "God bless you,\nShammah Urban Church\n";
+        send_email($email, 'We received your message - Shammah Urban Church', $copy, CONTACT_EMAIL);
+
         echo json_encode(['ok' => true, 'msg' => "Thank you {$name}! Your message has been emailed successfully. We'll be in touch within 24 hours."]);
     } else {
         http_response_code(503);
