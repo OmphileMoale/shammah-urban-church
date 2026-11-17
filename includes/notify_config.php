@@ -18,8 +18,13 @@
       paste the 16 letters and click Save (or set SHAMMAH_SMTP_PASS in Apache). */
 define('SMTP_HOST',      'smtp.gmail.com');
 define('SMTP_PORT',      465);                 // 465 = SSL, 587 = STARTTLS
-define('CONTACT_EMAIL',  'babatundesaliu19@gmail.com');
-define('SMTP_USER',      getenv('SHAMMAH_SMTP_USER') ?: CONTACT_EMAIL);
+/* CONTACT_EMAIL = the church inbox that RECEIVES contact-form messages.
+   SMTP_USER     = the Gmail account the website SENDS from (the account
+                   that owns the App Password). They can be the same.
+   The website can send TO any email address (visitors, members, admins);
+   only the sending account is fixed, because Gmail requires a login. */
+define('CONTACT_EMAIL',  getenv('SHAMMAH_CONTACT_EMAIL') ?: 'omphilemoale25@gmail.com');
+define('SMTP_USER',      getenv('SHAMMAH_SMTP_USER')     ?: 'omphilemoale25@gmail.com');
 // Read from Apache's environment (SetEnv SHAMMAH_SMTP_PASS) or, if that isn't set,
 // from includes/smtp_secret.php, which setup_email.php writes. Neither is in the repo.
 define('SMTP_PASS',      getenv('SHAMMAH_SMTP_PASS')
@@ -39,10 +44,28 @@ define('BULKSMS_SECRET',   '');
    Leave blank if you don't use Google sign-in.             */
 define('GOOGLE_WEB_CLIENT_ID', '');
 
-/* ── 4. TEST MODE ─────────────────────────────────────────
-   true  = if NEITHER email nor SMS could be sent, the code is
-           shown on screen so you can still demo the login.
-   false = never show the code (use this for the real church). */
-define('OTP_SHOW_CODE_IF_UNSENT', true);
+/* ── 4. WHAT HAPPENS IF A CODE CANNOT BE SENT ─────────────
+   false = a real member must receive the code by email or SMS.
+           If sending fails, nothing is shown on screen and no
+           account is created. USE THIS FOR THE REAL CHURCH.
+   true  = (old test mode) if neither email nor SMS could be sent,
+           the code is shown on the page. Anyone could then register
+           with a fake email, so keep it false.                    */
+define('OTP_SHOW_CODE_IF_UNSENT', false);
+
+/* ── 5. DEMO ACCOUNTS (for lecturers / markers) ───────────
+   The demo accounts below do not have real inboxes, so their
+   6-digit code is SHOWN ON THE SCREEN instead of being emailed.
+   Every other account always gets its code by email or SMS.
+   The password is still required, so this only replaces the
+   email step for these accounts.
+   Set DEMO_MODE to false (and delete the demo accounts) before
+   the website goes live for the real church.                     */
+define('DEMO_MODE', true);
+define('DEMO_ACCOUNTS', [
+    'admin@shammah.co.za',
+    'pastor@shammah.co.za',
+    'thabo@email.com',
+]);
 
 define('DEFAULT_COUNTRY_CODE', '27');

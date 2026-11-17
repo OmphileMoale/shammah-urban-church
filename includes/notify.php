@@ -34,12 +34,41 @@ function sms_configured(): bool
 }
 
 /* ─────────────────────────── EMAIL ─────────────────────────── */
+/* Does this email's domain exist at all (has mail/DNS records)?
+   Stops us sending to addresses like fake123@nowhere-test.com, which Gmail would accept
+   and then BOUNCE back to the church inbox (the bounce even contains the code).
+   Cannot tell if the *mailbox* exists (fake123@gmail.com) – that is what the 6-digit
+   code is for. If this PC has no DNS/internet we do not block anybody. */
+function email_domain_exists(string $email): bool
+{
+    $at = strrpos($email, '@');
+    if ($at === false) return false;
+    $domain = strtolower(trim(substr($email, $at + 1)));
+    if ($domain === '' || strpos($domain, '.') === false) return false;
+    if (function_exists('idn_to_ascii')) {
+        $ascii = @idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+        if ($ascii) $domain = $ascii;
+    }
+    if (!function_exists('checkdnsrr')) return true;
+
+    static $dnsWorks = null;                       // can this PC look up DNS at all?
+    if ($dnsWorks === null) $dnsWorks = @checkdnsrr('gmail.com.', 'MX');
+    if (!$dnsWorks) return true;                   // offline → fail open
+
+    $d = rtrim($domain, '.') . '.';
+    return @checkdnsrr($d, 'MX') || @checkdnsrr($d, 'A') || @checkdnsrr($d, 'AAAA');
+}
+
 function send_email(string $to, string $subject, string $text, ?string $replyTo = null): bool
 {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
     if ($replyTo !== null && !filter_var($replyTo, FILTER_VALIDATE_EMAIL)) return false;
     if (!email_configured()) {
         notify_log("EMAIL not sent to $to: SMTP credentials are not configured");
+        return false;
+    }
+    if (!email_domain_exists($to)) {
+        notify_log("EMAIL not sent to $to: that email domain does not exist");
         return false;
     }
     try {
