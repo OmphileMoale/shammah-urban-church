@@ -288,31 +288,36 @@ require_once 'includes/nav.php';
           $cy = round($item['height'] * 0.42);
           $icon = $item['icon'];
 
-          // Render a simple icon shape per type
-          echo '<circle cx="'.$cx.'" cy="'.$cy.'" r="44" fill="'.$item['accent'].'" fill-opacity="0.14"/>';
-          echo '<circle cx="'.$cx.'" cy="'.$cy.'" r="30" fill="'.$item['accent'].'" fill-opacity="0.18"/>';
-
-          // Simple symbolic SVG paths for each icon type
-          $paths = [
-            'music'      => 'M'.$cx.' '.($cy-14).' m-8-8 l0 22 m8-24 l0 22 m-8-14 l8-4',
-            'microphone' => 'M'.($cx-6).' '.($cy-14).' q0-8 12-8 q12 0 12 8 l0 10 q0 8-12 8 q-12 0-12-8z M'.$cx.' '.($cy+6).' l0 10 m-8 0 l16 0',
-            'flame'      => 'M'.$cx.' '.($cy-16).' q-12 8-8 16 q4 6 0 12 q8-4 10-12 q4 8 0 14 q10-6 8-18 q-4-12-10-12z',
-            'bolt'       => 'M'.($cx+6).' '.($cy-16).' l-12 16 l8 0 l-8 16 l20-20 l-10 0z',
-            'tent'       => 'M'.($cx-18).' '.($cy+12).' l18-28 l18 28z M'.($cx-24).' '.($cy+12).' l6 0 m12 0 l12 0',
-            'stars'      => 'M'.$cx.' '.($cy-16).' l3 8 l8 0 l-6 5 l2 8 l-7-4 l-7 4 l2-8 l-6-5 l8 0z',
-            'heart'      => 'M'.$cx.' '.($cy+14).' q-20-12-20-22 q0-10 10-10 q5 0 10 6 q5-6 10-6 q10 0 10 10 q0 10-20 22z',
-            'school'     => 'M'.($cx-18).' '.($cy+12).' l0-20 l18-10 l18 10 l0 20z M'.($cx-6).' '.($cy+12).' l0-10 l12 0 l0 10z',
-            'users'      => 'M'.($cx-10).' '.($cy-6).' a8 8 0 1 1 0-.01 M'.($cx+10).' '.($cy-6).' a8 8 0 1 1 0-.01 M'.($cx-24).' '.($cy+14).' q0-12 14-12 M'.($cx+10).' '.($cy+2).' q14 0 14 12',
-            'sun'        => 'M'.$cx.' '.($cy-16).' l0-6 M'.$cx.' '.($cy+16).' l0 6 M'.($cx-16).' '.$cy.' l-6 0 M'.($cx+16).' '.$cy.' l6 0 M'.($cx-11).' '.($cy-11).' l-4-4 M'.($cx+11).' '.($cy-11).' l4-4 M'.($cx-11).' '.($cy+11).' l-4 4 M'.($cx+11).' '.($cy+11).' l4 4',
-            'cross'      => 'M'.$cx.' '.($cy-18).' l0 36 M'.($cx-14).' '.($cy-6).' l28 0',
-            'flower'     => 'M'.$cx.' '.$cy.' m0-14 a6 6 0 0 1 0 12 a6 6 0 0 1 0-12 m10 4 a6 6 0 0 1-8 8 m-4 0 a6 6 0 0 1-8-8 m0-8 a6 6 0 0 1 8-8 m4 0 a6 6 0 0 1 8 8',
-            'droplet'    => 'M'.$cx.' '.($cy-18).' q0 0 14 20 q0 14-14 14 q-14 0-14-14 q0-20 14-20z',
-            'home'       => 'M'.($cx-18).' '.($cy+12).' l0-16 l18-14 l18 14 l0 16z M'.($cx-6).' '.($cy+12).' l0-10 l12 0 l0 10z',
-            'door-enter' => 'M'.($cx-16).' '.($cy+12).' l0-28 l20 0 l0 28 M'.($cx-4).' '.$cy.' l10 0 m-6-5 l6 5 l-6 5',
+          // Big colourful icon for each photo (emoji work in every browser, no files needed).
+          // 'main' = the large centre icon, 'side' = two small faded icons for atmosphere.
+          $emoji = [
+            'music'      => ['main' => '🎶', 'side' => ['🙌', '🎵']],
+            'microphone' => ['main' => '🎤', 'side' => ['🎸', '🎶']],
+            'flame'      => ['main' => '🕯️', 'side' => ['⭐', '🎄']],
+            'bolt'       => ['main' => '⚡', 'side' => ['🎧', '🙌']],
+            'tent'       => ['main' => '⛺', 'side' => ['🔥', '🌲']],
+            'stars'      => ['main' => '🌟', 'side' => ['🎶', '✨']],
+            'heart'      => ['main' => '🍞', 'side' => ['❤️', '🥫']],
+            'school'     => ['main' => '🎒', 'side' => ['✏️', '📚']],
+            'users'      => ['main' => '🤝', 'side' => ['❤️', '🏡']],
+            'sun'        => ['main' => '🧺', 'side' => ['☀️', '🌳']],
+            'cross'      => ['main' => '✝️', 'side' => ['🌅', '🕊️']],
+            'flower'     => ['main' => '🌸', 'side' => ['🍽️', '💐']],
+            'droplet'    => ['main' => '💧', 'side' => ['🕊️', '🙏']],
+            'home'       => ['main' => '🏠', 'side' => ['📖', '🍲']],
+            'door-enter' => ['main' => '🤗', 'side' => ['🚪', '💛']],
           ];
+          $e = $emoji[$icon] ?? ['main' => '⛪', 'side' => ['✨', '🙏']];
+          $ef = "'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif";
 
-          $d = $paths[$icon] ?? 'M'.$cx.' '.($cy-14).' l0 28 M'.($cx-14).' '.$cy.' l28 0';
-          echo '<path d="'.$d.'" stroke="'.$item['accent'].'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+          // soft glow rings behind the main icon
+          echo '<circle cx="'.$cx.'" cy="'.$cy.'" r="62" fill="'.$item['accent'].'" fill-opacity="0.10"/>';
+          echo '<circle cx="'.$cx.'" cy="'.$cy.'" r="46" fill="'.$item['accent'].'" fill-opacity="0.16"/>';
+          // main icon
+          echo '<text x="'.$cx.'" y="'.($cy + 22).'" text-anchor="middle" font-size="64" font-family="'.$ef.'">'.$e['main'].'</text>';
+          // two small faded icons
+          echo '<text x="'.($cx - 118).'" y="'.($cy - 28).'" text-anchor="middle" font-size="26" fill-opacity="0.55" opacity="0.55" font-family="'.$ef.'">'.$e['side'][0].'</text>';
+          echo '<text x="'.($cx + 118).'" y="'.($cy + 40).'" text-anchor="middle" font-size="26" opacity="0.55" font-family="'.$ef.'">'.$e['side'][1].'</text>';
           ?>
 
           <!-- Title text at bottom of card -->
@@ -429,6 +434,5 @@ const GALLERY_ITEMS = <?= json_encode(array_map(fn($i) => [
 const IS_LOGGED_IN = <?= json_encode($is_logged_in) ?>;
 const CSRF_TOKEN   = <?= json_encode($_SESSION['csrf_token'] ?? '') ?>;
 </script>
-<script src="js/gallery.js"></script>
 
 <?php require_once 'includes/footer.php'; ?>
