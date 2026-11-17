@@ -1,5 +1,5 @@
 logs/
-includes/smtp_secret.php
-
 .vs/
+includes/smtp_secret.php
 httpd.conf.txt
+*.log
