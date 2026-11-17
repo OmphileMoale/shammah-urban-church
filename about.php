@@ -20,6 +20,7 @@ session_start();
    data used on the homepage.
 ──────────────────────────────────────── */
 require_once 'includes/data.php';
+$stats = shammah_live_stats($stats);   // real numbers from the database
 
 /* ── AUTH STATE ─────────────────────────
    Same pattern as index.php — check the
@@ -164,7 +165,7 @@ require_once 'includes/nav.php';
       <?php
       // Same four stats as index.php — pulled from data.php
       $stat_items = [
-        ['val' => $stats['members'],    'suf' => '+', 'lbl' => 'Active Members'],
+        ['val' => $stats['members'],    'suf' => $stats['live'] ? '' : '+', 'lbl' => 'Active Members'],
         ['val' => $stats['ministries'], 'suf' => '',  'lbl' => 'Ministries'],
         ['val' => $stats['groups'],     'suf' => '',  'lbl' => 'Cell Groups'],
         ['val' => $stats['years'],      'suf' => '',  'lbl' => 'Years of Ministry'],
@@ -189,27 +190,54 @@ require_once 'includes/nav.php';
   <section class="section about-mv-section" aria-label="Mission and Vision">
     <div class="section-wide about-mv-grid">
 
-      <!-- Left: image placeholder + address -->
-      <div class="about-img-block" aria-label="Church building photo">
-        <div class="about-img-placeholder">
-          <div class="about-img-inner">
-            <i class="ti ti-building-church" aria-hidden="true"
-               style="font-size:48px;color:var(--gold);margin-bottom:12px"></i>
-            <p style="color:var(--gold);font-size:12px;letter-spacing:1px;
-                      text-transform:uppercase;font-weight:600">Church Building Photo</p>
-            <p style="color:rgba(255,255,255,.5);font-size:11px;margin-top:6px">
-              1103 Eland St, Mooikloof
-            </p>
-          </div>
+      <!-- Left: church icon panel + address (replaces the building photo) -->
+      <div class="about-img-block about-icon-panel" aria-label="Shammah Urban Church">
+        <div class="about-icon-circle" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="64" height="64" fill="none" stroke="currentColor"
+               stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M32 4v10M27 9h10"/>
+            <path d="M32 14 18 26v32h28V26L32 14Z"/>
+            <path d="M26 58V44a6 6 0 0 1 12 0v14"/>
+            <path d="M18 34H8v24M46 34h10v24"/>
+            <path d="M4 58h56"/>
+          </svg>
         </div>
-        <!--
-          In production, replace the placeholder above with:
-          <img src="assets/images/church-building.jpg"
-               alt="Shammah Urban Church building at 1103 Eland Street, Mooikloof"
-               loading="lazy">
-          WHERE photo = SELECT photo FROM SETTINGS WHERE key='building_photo'
-        -->
+        <h3 class="about-icon-title">Shammah Urban Church</h3>
+        <p class="about-icon-tag">"The Lord is There"</p>
+        <div class="about-icon-divider" aria-hidden="true"></div>
+        <p class="about-icon-addr">
+          <i class="ti ti-map-pin" aria-hidden="true"></i>
+          1103 Eland St, Mooikloof, Pretoria
+        </p>
+        <p class="about-icon-since">Serving Pretoria since 2009</p>
       </div>
+      <style>
+        .about-icon-panel {
+          background: linear-gradient(135deg, var(--navy) 0%, #5C1A47 100%);
+          border-radius: var(--r-lg);
+          min-height: 280px;
+          padding: 36px 24px;
+          display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          text-align: center;
+        }
+        .about-icon-circle {
+          width: 112px; height: 112px; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          color: var(--gold);
+          background: rgba(201,168,76,.12);
+          border: 2px solid rgba(201,168,76,.55);
+          box-shadow: 0 0 0 10px rgba(201,168,76,.07);
+          margin-bottom: 20px;
+        }
+        .about-icon-circle svg { width: 60px; height: 60px; }
+        .about-icon-title { color: #fff; font-size: 22px; margin: 0 0 4px; }
+        .about-icon-tag   { color: var(--gold); font-style: italic; margin: 0; font-size: 14px; }
+        .about-icon-divider { width: 48px; height: 2px; background: var(--gold); opacity: .6; margin: 16px 0; }
+        .about-icon-addr  { color: rgba(255,255,255,.85); font-size: 14px; margin: 0 0 6px; }
+        .about-icon-addr .ti { color: var(--gold); vertical-align: -2px; }
+        .about-icon-since { color: rgba(255,255,255,.55); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 0; }
+      </style>
 
       <!-- Right: mission text -->
       <div class="about-mission-text">

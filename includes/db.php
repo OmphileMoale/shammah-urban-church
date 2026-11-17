@@ -29,6 +29,14 @@ try {
         ]
     );
 } catch (PDOException $e) {
+    /* Public pages that only want live numbers set DB_SOFT_FAIL first.
+       They get $pdo = null and fall back to safe defaults instead of
+       a database-setup page. Every other page keeps the normal behaviour. */
+    if (!empty($GLOBALS['DB_SOFT_FAIL'])) {
+        error_log('Shammah DB soft-fail: ' . $e->getMessage());
+        $pdo = null;
+        return;
+    }
     http_response_code(503);
 
     /* AJAX / POST requests get JSON */

@@ -28,6 +28,9 @@ session_start();
    $verse, and $ticker_str are all available.
 ──────────────────────────────────────── */
 require_once 'includes/data.php';
+$stats  = shammah_live_stats($stats);     // real numbers from the database
+$events = shammah_live_events($events);   // real events + RSVP numbers from the database
+if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));   // needed by the RSVP button
 
 /* ── AUTH STATE ─────────────────────────
    Read the PHP session to check if the
@@ -117,7 +120,7 @@ require_once 'includes/nav.php';
       <?php
       // Build the four stat items from $stats (defined in data.php)
       $stat_items = [
-        ['val' => $stats['members'],    'suf' => '+', 'lbl' => 'Active Members'],
+        ['val' => $stats['members'],    'suf' => $stats['live'] ? '' : '+', 'lbl' => 'Active Members'],
         ['val' => $stats['ministries'], 'suf' => '',  'lbl' => 'Ministries'],
         ['val' => $stats['groups'],     'suf' => '',  'lbl' => 'Cell Groups'],
         ['val' => $stats['years'],      'suf' => '',  'lbl' => 'Years of Ministry'],
