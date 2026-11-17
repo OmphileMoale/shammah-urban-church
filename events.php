@@ -12,6 +12,11 @@
 ═══════════════════════════════════════ */
 session_start();
 require_once 'includes/data.php';
+if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));   // needed by the RSVP button
+
+/* Real numbers: events, capacity and RSVPs now come from the database */
+$events      = shammah_live_events($events);
+$past_events = shammah_live_past_events($past_events);
 
 /* ── AUTH STATE ─────────────────────── */
 $is_logged_in = isset($_SESSION['member_id']);
@@ -24,7 +29,7 @@ $page_desc  = 'Browse all upcoming events at Shammah Urban Church — RSVP, get 
 
 /* ── SUMMARY COUNTS (for the hero stats) ── */
 $total_upcoming = count($events);
-$total_rsvps    = array_sum(array_column($events, 'rsvp'));
+$total_rsvps    = shammah_rsvps_this_month(array_sum(array_column($events, 'rsvp')));
 $categories     = array_unique(array_column($events, 'category'));
 
 require_once 'includes/header.php';
@@ -59,7 +64,7 @@ require_once 'includes/nav.php';
         </div>
         <div class="hero-stat-divider" aria-hidden="true"></div>
         <div class="hero-stat">
-          <strong><?= $total_rsvps ?>+</strong>
+          <strong><?= (int) $total_rsvps ?></strong>
           <span>RSVPs This Month</span>
         </div>
         <div class="hero-stat-divider" aria-hidden="true"></div>

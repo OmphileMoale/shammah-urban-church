@@ -59,6 +59,14 @@ try {
            a previously cancelled RSVP.
         ──────────────────────────────────── */
 
+        /* Already going? Then do not count them twice */
+        $mine = $pdo->prepare('SELECT status FROM RSVP WHERE member_id = ? AND event_id = ?');
+        $mine->execute([$member_id, $event_id]);
+        if ($mine->fetchColumn() === 'confirmed') {
+            echo json_encode(['ok' => true, 'already' => true, 'msg' => 'You have already RSVP\'d for this event.']);
+            exit;
+        }
+
         /* Check how full the event is */
         $cap = $pdo->prepare('
             SELECT e.capacity,

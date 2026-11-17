@@ -24,49 +24,45 @@
  */
 function handleRSVP(eventId, eventTitle) {
 
-  // IS_LOGGED_IN is a JS variable injected by PHP (see bottom of index.php)
-  if (!IS_LOGGED_IN) {
-    // User must log in first
-    showToast('Please login to RSVP for events.', 'warn');
-    // Redirect to login after 1.8s so the user can read the toast
-    setTimeout(() => {
-      location.href = 'login.php?redirect=index.php';
-    }, 1800);
-    return; // stop the function here
-  }
-
-  /* ── FETCH API ────────────────────────
-     fetch() makes an HTTP request from JS
-     without reloading the page (AJAX).
-     
-     We POST to rsvp.php with:
-     - Content-Type: application/json
-       (tells server we're sending JSON)
-     - X-CSRF-Token: a security token from
-       the PHP session (prevents CSRF attacks)
-     - body: JSON string with the event_id
-  ──────────────────────────────────────── */
-  fetch('rsvp.php', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': CSRF_TOKEN, // injected by PHP
-    },
-    body: JSON.stringify({ event_id: eventId }),
-  })
-  // .then() chains handle the async response
-  .then((response) => response.json()) // parse response as JSON
-  .then((data) => {
-    if (data.success) {
-      // rsvp.php returned { success: true }
-      showToast(`✅ RSVP confirmed for "${eventTitle}"!`, 'success');
-    } else {
-      // rsvp.php returned { success: false, message: '...' }
-      showToast(data.message || 'Something went wrong. Try again.', 'error');
+    // IS_LOGGED_IN is a JS variable injected by PHP (see bottom of index.php)
+    if (!IS_LOGGED_IN) {
+        // User must log in first
+        showToast('Please login to RSVP for events.', 'warn');
+        // Redirect to login after 1.8s so the user can read the toast
+        setTimeout(() => {
+            location.href = 'login.php?redirect=index.php';
+        }, 1800);
+        return; // stop the function here
     }
-  })
-  // .catch() handles network errors (no internet, server down, etc.)
-  .catch(() => {
-    showToast('Network error. Please try again.', 'error');
-  });
+
+    /* ── SAVE THE RSVP ────────────────────
+       POST to rsvp_handler.php, which saves a row in the RSVP table
+       (capacity is checked there). On success the page reloads so the
+       RSVP count, spots remaining and progress bar come from the
+       database and are always correct.
+    ──────────────────────────────────────── */
+    const form = new FormData();
+    form.append('action', 'rsvp');
+    form.append('event_id', eventId);
+    form.append('csrf', CSRF_TOKEN);   // injected by PHP
+
+    fetch('rsvp_handler.php', {
+        method: 'POST',
+        body: form,
+        credentials: 'same-origin',
+    })
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.ok) {
+                showToast(data.already
+                    ? `You are already registered for "${eventTitle}".`
+                    : `✅ RSVP confirmed for "${eventTitle}"!`, 'success');
+                if (!data.already) setTimeout(() => location.reload(), 1200);
+            } else {
+                showToast(data.msg || 'Something went wrong. Try again.', 'error');
+            }
+        })
+        .catch(() => {
+            showToast('Network error. Please try again.', 'error');
+        });
 }
