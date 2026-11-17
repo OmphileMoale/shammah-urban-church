@@ -1,600 +1,466 @@
 <?php
-/* ═══════════════════════════════════════
-   prayer.php  –  PRAYER WALL PAGE
+/* ═══════════════════════════════════════════════════════════════
+   prayer.php  –  PRAYER WALL (database-driven)
 
-   HOW THIS FILE WORKS:
-   1. session_start()       – reads PHP session (auth state)
-   2. require data.php      – loads $announcements (ticker) + $verse
-   3. $prayer_requests      – all public prayer submissions
-   4. $categories           – prayer categories with colours
-   5. $prayer_stats         – site-wide impact numbers
-   6. Hero + scripture      – banner with verse and live stats
-   7. Breadcrumb            – Home > Prayer
-   8. Two-column layout     – Submit form (left) + Prayer Wall (right)
-   9. Category filter pills – filter wall cards by category
-   10. Prayer wall cards    – colour-coded, with Praying button + Answered toggle
-   11. Daily verse band     – Scripture card from data.php
-   12. CTA section          – bottom call-to-action
-
-   DATABASE NOTES:
-   $prayer_requests simulates a PRAYER_REQUEST table.
-   Fields: id, name, category, message, is_anonymous,
-           prayer_count, is_answered, time_ago.
-   When you add a real DB, replace the array with:
-     $stmt = $pdo->query(
-       "SELECT * FROM PRAYER_REQUEST
-        WHERE is_public = 1
-        ORDER BY created_at DESC"
-     );
-     $prayer_requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-   The "Praying" button would POST to a small endpoint:
-     POST /api/pray.php  { prayer_id: X }
-     UPDATE PRAYER_REQUEST SET prayer_count = prayer_count + 1 WHERE id = X
-
-   The "Answered" toggle would POST to:
-     POST /api/answered.php { prayer_id: X }
-     UPDATE PRAYER_REQUEST SET is_answered = 1 WHERE id = X
-═══════════════════════════════════════ */
+   What this file does:
+   1. Creates its own tables the first time it runs.
+   2. Visitors submit a prayer. It waits for a pastor to approve it
+      (change PRAYER_NEEDS_APPROVAL to false to publish instantly).
+   3. Pastors/admins approve, reject or mark prayers as answered.
+   4. "I prayed" button raises the prayer's count (one per person).
+   5. The four hero numbers and the category counts are CALCULATED
+      from the database, so they rise as prayers are approved.
+═══════════════════════════════════════════════════════════════ */
 session_start();
+
 require_once 'includes/data.php';
+require_once 'includes/db.php';
 
-/* ── AUTH STATE ─────────────────────── */
+/* ── SETTINGS ───────────────────────── */
+const PRAYER_NEEDS_APPROVAL = true;   // false = prayers appear immediately
+const BASE_SUBMITTED        = 142;    // starting numbers shown before real data
+const BASE_INTERCESSIONS    = 1840;   // (set all three to 0 to show only real data)
+const BASE_ANSWERED         = 38;
+
+$PRAYER_CATEGORIES = [
+    'Health & Healing'  => '❤️',
+    'Family'            => '👨‍👩‍👧',
+    'Financial'         => '💛',
+    'Spiritual Growth'  => '📖',
+    'Relationships'     => '🤝',
+    'Thanksgiving'      => '🎉',
+    'Protection'        => '🛡️',
+    'Guidance'          => '🧭',
+];
+
+/* ── WHO IS LOGGED IN ───────────────── */
 $is_logged_in = isset($_SESSION['member_id']);
-$user_name    = $is_logged_in ? htmlspecialchars($_SESSION['member_name'] ?? 'Member') : '';
-$user_role    = $is_logged_in ? ($_SESSION['role'] ?? 'member') : '';
+$user_role    = $_SESSION['role'] ?? '';
+$user_name    = $_SESSION['member_name'] ?? ($_SESSION['name'] ?? ($_SESSION['first_name'] ?? ''));
+$is_pastor    = in_array($user_role, ['pastor', 'admin'], true);
+$who          = $is_logged_in ? 'm' . (int) $_SESSION['member_id'] : 's' . session_id();
 
-/* ── PAGE META ──────────────────────── */
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+function csrf_ok(): bool {
+    return isset($_POST['csrf'], $_SESSION['csrf_token'])
+        && hash_equals($_SESSION['csrf_token'], $_POST['csrf']);
+}
+
+/* ── CREATE TABLES (first run only) ─── */
+$pdo->exec("CREATE TABLE IF NOT EXISTS PRAYER_WALL (
+    id           INT AUTO_INCREMENT PRIMARY KEY,
+    member_id    INT NULL,
+    display_name VARCHAR(80)  NOT NULL,
+    is_anonymous TINYINT(1)   NOT NULL DEFAULT 0,
+    category     VARCHAR(40)  NOT NULL,
+    request_text TEXT         NOT NULL,
+    status       ENUM('pending','approved','answered','rejected') NOT NULL DEFAULT 'pending',
+    prayed_count INT          NOT NULL DEFAULT 0,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_status (status),
+    INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$pdo->exec("CREATE TABLE IF NOT EXISTS PRAYER_WALL_PRAYED (
+    prayer_id INT         NOT NULL,
+    who       VARCHAR(80) NOT NULL,
+    PRIMARY KEY (prayer_id, who)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+/* Starter prayers so the wall is not empty on day one */
+if ((int) $pdo->query('SELECT COUNT(*) FROM PRAYER_WALL')->fetchColumn() === 0) {
+    $seed = $pdo->prepare("INSERT INTO PRAYER_WALL
+        (display_name, is_anonymous, category, request_text, status, prayed_count, created_at)
+        VALUES (?, ?, ?, ?, 'approved', ?, DATE_SUB(NOW(), INTERVAL ? HOUR))");
+    $seed->execute(['Anonymous', 1, 'Health & Healing',
+        "Please pray for my mother's recovery from surgery. She needs strength and healing from God. The doctors say it will be a long road but we trust the Lord.", 24, 2]);
+    $seed->execute(['Thandi M.', 0, 'Thanksgiving',
+        'Praise God! After months of searching I finally got a job. Thank you to everyone who prayed with me.', 31, 10]);
+    $seed->execute(['Sipho K.', 0, 'Guidance',
+        'Praying for wisdom as I make a decision about studying further. Please ask God to open the right door.', 12, 30]);
+}
+
+/* ═══════════════════════════════════
+   ACTIONS (POST)
+═══════════════════════════════════ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    /* ── "I PRAYED" (called by JS, returns JSON) ── */
+    if ($action === 'pray') {
+        header('Content-Type: application/json');
+        if (!csrf_ok()) { echo json_encode(['ok' => false, 'msg' => 'Please refresh the page.']); exit; }
+        $id = (int) ($_POST['id'] ?? 0);
+
+        $chk = $pdo->prepare("SELECT 1 FROM PRAYER_WALL WHERE id = ? AND status IN ('approved','answered')");
+        $chk->execute([$id]);
+        if (!$chk->fetchColumn()) { echo json_encode(['ok' => false, 'msg' => 'Prayer not found.']); exit; }
+
+        $ins = $pdo->prepare('INSERT IGNORE INTO PRAYER_WALL_PRAYED (prayer_id, who) VALUES (?, ?)');
+        $ins->execute([$id, $who]);
+        if ($ins->rowCount() === 1) {
+            $pdo->prepare('UPDATE PRAYER_WALL SET prayed_count = prayed_count + 1 WHERE id = ?')->execute([$id]);
+        }
+        $n = $pdo->prepare('SELECT prayed_count FROM PRAYER_WALL WHERE id = ?');
+        $n->execute([$id]);
+        echo json_encode(['ok' => true, 'count' => (int) $n->fetchColumn()]);
+        exit;
+    }
+
+    /* ── SUBMIT A PRAYER ── */
+    if ($action === 'submit') {
+        $flash = ['ok' => false, 'msg' => ''];
+        $name  = trim($_POST['name'] ?? '');
+        $cat   = trim($_POST['category'] ?? '');
+        $text  = trim($_POST['request_text'] ?? '');
+        $anon  = isset($_POST['anonymous']) ? 1 : 0;
+        $errors = [];
+
+        if (!csrf_ok())                              $errors[] = 'Security token mismatch. Please refresh the page.';
+        if ($is_logged_in && $user_name !== '')      $name = $user_name;
+        if (mb_strlen($name) < 2 || mb_strlen($name) > 80) $errors[] = 'Please enter your name (2 to 80 characters).';
+        if (!isset($PRAYER_CATEGORIES[$cat]))        $errors[] = 'Please choose a category.';
+        if (mb_strlen($text) < 10)                   $errors[] = 'Your prayer request must be at least 10 characters.';
+        if (mb_strlen($text) > 1000)                 $errors[] = 'Your prayer request must be 1000 characters or fewer.';
+        if (isset($_SESSION['pw_last']) && time() - $_SESSION['pw_last'] < 30)
+                                                     $errors[] = 'Please wait a few seconds before submitting another request.';
+
+        if ($errors) {
+            $flash['msg'] = implode(' ', $errors);
+        } else {
+            $status = (!PRAYER_NEEDS_APPROVAL || $is_pastor) ? 'approved' : 'pending';
+            $pdo->prepare('INSERT INTO PRAYER_WALL (member_id, display_name, is_anonymous, category, request_text, status)
+                           VALUES (?, ?, ?, ?, ?, ?)')
+                ->execute([$is_logged_in ? (int) $_SESSION['member_id'] : null, $name, $anon, $cat, $text, $status]);
+            $_SESSION['pw_last'] = time();
+            $flash = ['ok' => true, 'msg' => $status === 'approved'
+                ? 'Thank you. Your prayer request is now on the wall.'
+                : 'Thank you. Your prayer request was received and will appear once a pastor approves it.'];
+        }
+        $_SESSION['pw_flash'] = $flash;
+        header('Location: prayer.php#submit');
+        exit;
+    }
+
+    /* ── PASTOR: APPROVE / REJECT / ANSWERED ── */
+    if ($action === 'moderate') {
+        $map = ['approve' => 'approved', 'reject' => 'rejected', 'answered' => 'answered'];
+        $do  = $_POST['do'] ?? '';
+        if ($is_pastor && csrf_ok() && isset($map[$do])) {
+            $pdo->prepare('UPDATE PRAYER_WALL SET status = ? WHERE id = ?')
+                ->execute([$map[$do], (int) ($_POST['id'] ?? 0)]);
+            $_SESSION['pw_flash'] = ['ok' => true, 'msg' => 'Prayer updated.'];
+        } else {
+            $_SESSION['pw_flash'] = ['ok' => false, 'msg' => 'You do not have permission to do that.'];
+        }
+        header('Location: prayer.php');
+        exit;
+    }
+}
+
+/* ═══════════════════════════════════
+   DATA FOR THE PAGE
+═══════════════════════════════════ */
+$flash = $_SESSION['pw_flash'] ?? null;
+unset($_SESSION['pw_flash']);
+
+/* Hero numbers: base + live counts */
+$row = $pdo->query("SELECT
+        COALESCE(SUM(status IN ('approved','answered')), 0)                          AS submitted,
+        COALESCE(SUM(CASE WHEN status IN ('approved','answered') THEN prayed_count END), 0) AS intercessions,
+        COALESCE(SUM(status = 'answered'), 0)                                        AS answered,
+        COUNT(DISTINCT CASE WHEN status IN ('approved','answered') THEN category END) AS cats
+    FROM PRAYER_WALL")->fetch(PDO::FETCH_ASSOC);
+
+$stat_submitted     = BASE_SUBMITTED     + (int) $row['submitted'];
+$stat_intercessions = BASE_INTERCESSIONS + (int) $row['intercessions'];
+$stat_answered      = BASE_ANSWERED      + (int) $row['answered'];
+$stat_categories    = max(count($PRAYER_CATEGORIES), (int) $row['cats']);
+
+/* Category chip counts */
+$cat_counts = [];
+$total_live = 0;
+foreach ($pdo->query("SELECT category, COUNT(*) c FROM PRAYER_WALL
+                      WHERE status IN ('approved','answered') GROUP BY category") as $r) {
+    $cat_counts[$r['category']] = (int) $r['c'];
+    $total_live += (int) $r['c'];
+}
+
+/* Filter + sort */
+$cat  = $_GET['cat']  ?? '';
+$sort = $_GET['sort'] ?? 'recent';
+if (!isset($PRAYER_CATEGORIES[$cat])) $cat = '';
+if (!in_array($sort, ['recent', 'prayed'], true)) $sort = 'recent';
+
+$sql    = "SELECT * FROM PRAYER_WALL WHERE status IN ('approved','answered')";
+$params = [];
+if ($cat !== '') { $sql .= ' AND category = ?'; $params[] = $cat; }
+$sql   .= $sort === 'prayed' ? ' ORDER BY prayed_count DESC, id DESC' : ' ORDER BY created_at DESC, id DESC';
+$sql   .= ' LIMIT 50';
+$list = $pdo->prepare($sql);
+$list->execute($params);
+$prayers = $list->fetchAll(PDO::FETCH_ASSOC);
+
+/* Which of these has this visitor already prayed for? */
+$already = [];
+$a = $pdo->prepare('SELECT prayer_id FROM PRAYER_WALL_PRAYED WHERE who = ?');
+$a->execute([$who]);
+foreach ($a->fetchAll(PDO::FETCH_COLUMN) as $pid) $already[(int) $pid] = true;
+
+/* Pastor queue */
+$pending = $is_pastor
+    ? $pdo->query("SELECT * FROM PRAYER_WALL WHERE status = 'pending' ORDER BY created_at ASC")->fetchAll(PDO::FETCH_ASSOC)
+    : [];
+
+function time_ago(string $dt): string {
+    $s = max(0, time() - strtotime($dt));
+    if ($s < 60)     return 'just now';
+    if ($s < 3600)   return floor($s / 60)    . ' min ago';
+    if ($s < 86400)  return floor($s / 3600)  . ' hours ago';
+    if ($s < 604800) return floor($s / 86400) . ' days ago';
+    return date('j M Y', strtotime($dt));
+}
+function h($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); }
+
+/* ── PAGE META ── */
 $page_title = 'Prayer Wall | Shammah Urban Church';
-$page_desc  = 'Submit a prayer request and intercede for the Shammah Urban Church community. Browse the prayer wall, pray for others, and celebrate answered prayers.';
-
-/* ══════════════════════════════════════
-   PRAYER CATEGORIES
-   Each category has a colour for the card's
-   left accent border and the filter pills.
-══════════════════════════════════════ */
-$categories = [
-  'Health & Healing'  => ['color' => '#C0392B', 'icon' => 'ti-heart-pulse',    'emoji' => '❤️'],
-  'Family'            => ['color' => '#C9A84C', 'icon' => 'ti-users',           'emoji' => '👨‍👩‍👧'],
-  'Financial'         => ['color' => '#639922', 'icon' => 'ti-coin',            'emoji' => '💛'],
-  'Spiritual Growth'  => ['color' => '#378ADD', 'icon' => 'ti-book',            'emoji' => '📖'],
-  'Relationships'     => ['color' => '#8E44AD', 'icon' => 'ti-heart-handshake', 'emoji' => '🤝'],
-  'Thanksgiving'      => ['color' => '#27AE60', 'icon' => 'ti-confetti',        'emoji' => '🎉'],
-  'Protection'        => ['color' => '#3D0C2F', 'icon' => 'ti-shield',          'emoji' => '🛡️'],
-  'Guidance'          => ['color' => '#E67E22', 'icon' => 'ti-compass',         'emoji' => '🧭'],
-];
-
-/* ══════════════════════════════════════
-   PRAYER REQUESTS DATA ARRAY
-   Each entry = one row in PRAYER_REQUEST table.
-   FIELDS:
-   id            – unique ID (DB primary key later)
-   name          – display name (or "Anonymous")
-   is_anonymous  – true = name was hidden by submitter
-   category      – matches a key in $categories above
-   message       – the prayer request text
-   time_ago      – human-readable time since submission
-   prayer_count  – how many people have clicked "Praying"
-   is_answered   – true = submitter marked this as answered
-   member_prayed – simulate if THIS logged-in user already prayed
-══════════════════════════════════════ */
-$prayer_requests = [
-  [
-    'id'            => 1,
-    'name'          => 'Anonymous',
-    'is_anonymous'  => true,
-    'category'      => 'Health & Healing',
-    'message'       => 'Please pray for my mother\'s recovery from surgery. She needs strength and healing from God. The doctors say it will be a long road but we trust the Lord.',
-    'time_ago'      => '2 hours ago',
-    'prayer_count'  => 24,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 2,
-    'name'          => 'Zanele D.',
-    'is_anonymous'  => false,
-    'category'      => 'Thanksgiving',
-    'message'       => 'God provided my family with a new home after months of prayer! After being on the waiting list for almost a year, we received the keys this week. Thank you Shammah family for standing with us!',
-    'time_ago'      => 'Yesterday',
-    'prayer_count'  => 47,
-    'is_answered'   => true,
-    'member_prayed' => true,
-  ],
-  [
-    'id'            => 3,
-    'name'          => 'Thabo N.',
-    'is_anonymous'  => false,
-    'category'      => 'Spiritual Growth',
-    'message'       => 'Pray for my consistency in morning devotions and that I would grow deeper in my walk with God. I want to develop a stronger prayer life and really understand the Word.',
-    'time_ago'      => '2 days ago',
-    'prayer_count'  => 18,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 4,
-    'name'          => 'Anonymous',
-    'is_anonymous'  => true,
-    'category'      => 'Financial',
-    'message'       => 'I am facing a very difficult financial season. Please pray for wisdom in managing what I have and for God to open doors of provision. I believe in His faithfulness.',
-    'time_ago'      => '3 days ago',
-    'prayer_count'  => 31,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 5,
-    'name'          => 'Priya G.',
-    'is_anonymous'  => false,
-    'category'      => 'Family',
-    'message'       => 'Please pray for my teenage son who has been struggling with peer pressure and making poor choices. I pray that God will protect him and draw his heart back to the Lord.',
-    'time_ago'      => '4 days ago',
-    'prayer_count'  => 22,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 6,
-    'name'          => 'Elder Nkosi',
-    'is_anonymous'  => false,
-    'category'      => 'Protection',
-    'message'       => 'Lift up our nation in prayer. South Africa needs divine intervention — protection from violence, wisdom for our leaders, and a revival of faith across every community.',
-    'time_ago'      => '5 days ago',
-    'prayer_count'  => 89,
-    'is_answered'   => false,
-    'member_prayed' => true,
-  ],
-  [
-    'id'            => 7,
-    'name'          => 'Nomsa K.',
-    'is_anonymous'  => false,
-    'category'      => 'Guidance',
-    'message'       => 'I am at a crossroads — deciding between two job opportunities. One pays more but the other aligns with my calling. Please pray for clear direction from the Holy Spirit.',
-    'time_ago'      => '1 week ago',
-    'prayer_count'  => 15,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 8,
-    'name'          => 'Anonymous',
-    'is_anonymous'  => true,
-    'category'      => 'Relationships',
-    'message'       => 'My marriage has been under a lot of strain this year. Please pray for healing, restoration, and renewed love in our home. We are committed but we need God\'s help.',
-    'time_ago'      => '1 week ago',
-    'prayer_count'  => 37,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 9,
-    'name'          => 'Sifiso M.',
-    'is_anonymous'  => false,
-    'category'      => 'Thanksgiving',
-    'message'       => 'After three years of studying, I finally graduated last weekend! God is faithful. Thank you to everyone who prayed for me through the late nights and exam anxiety.',
-    'time_ago'      => '2 weeks ago',
-    'prayer_count'  => 54,
-    'is_answered'   => true,
-    'member_prayed' => false,
-  ],
-  [
-    'id'            => 10,
-    'name'          => 'Anonymous',
-    'is_anonymous'  => true,
-    'category'      => 'Health & Healing',
-    'message'       => 'I was recently diagnosed with a chronic illness. I am scared but I choose to trust God. Please pray for peace, strength, and complete healing according to His will.',
-    'time_ago'      => '2 weeks ago',
-    'prayer_count'  => 43,
-    'is_answered'   => false,
-    'member_prayed' => false,
-  ],
-];
-
-/* ── PAGE STATS ─────────────────────── */
-$total_requests   = 142;
-$total_prayers    = 1840;
-$total_answered   = 38;
-$wall_count       = count($prayer_requests);
+$page_desc  = 'Share a prayer request and pray for others in the Shammah Urban Church community.';
 
 require_once 'includes/header.php';
 require_once 'includes/nav.php';
 ?>
+<style>
+  .pw-flash{max-width:1100px;margin:20px auto 0;padding:14px 18px;border-radius:10px;font-size:.95rem}
+  .pw-flash.ok{background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7}
+  .pw-flash.err{background:#fdecea;color:#b71c1c;border:1px solid #f5c6cb}
+  .pw-stats{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 40px;margin:28px auto 0;max-width:720px;
+            padding:18px 24px;border:1px solid rgba(201,168,76,.35);border-radius:14px;background:rgba(255,255,255,.05)}
+  .pw-stat{text-align:center}.pw-stat b{display:block;font-size:1.9rem;color:#c9a84c;font-family:Georgia,serif}
+  .pw-stat span{font-size:.72rem;letter-spacing:.04em;opacity:.8}
+  .pw-grid{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:28px;max-width:1100px;margin:36px auto;padding:0 16px;align-items:start}
+  @media(max-width:860px){.pw-grid{grid-template-columns:1fr}}
+  .pw-card{background:#fff;border:1px solid #eadfe6;border-radius:14px;padding:22px}
+  .pw-card h2,.pw-card h3{margin:0 0 14px;font-family:Georgia,serif;color:#3d0f33}
+  .pw-card label{display:block;font-size:.8rem;margin:12px 0 5px;font-weight:600}
+  .pw-card input[type=text],.pw-card select,.pw-card textarea{width:100%;padding:10px 12px;border:1px solid #d9ccd4;border-radius:8px;font:inherit;box-sizing:border-box}
+  .pw-card textarea{min-height:120px;resize:vertical}
+  .pw-count{font-size:.75rem;text-align:right;opacity:.7}
+  .pw-btn{background:#4a0f3d;color:#c9a84c;border:0;border-radius:8px;padding:12px 18px;font-weight:700;cursor:pointer;width:100%;margin-top:14px}
+  .pw-btn:hover{background:#5d1650}
+  .pw-chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 18px}
+  .pw-chip{padding:7px 12px;border:1px solid #d9ccd4;border-radius:999px;font-size:.8rem;text-decoration:none;color:#3d0f33;background:#fff}
+  .pw-chip.on{background:#4a0f3d;color:#fff;border-color:#4a0f3d}
+  .pw-chip small{opacity:.7;margin-left:4px}
+  .pw-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .pw-item{background:#fff;border:1px solid #eadfe6;border-left:4px solid #b3202f;border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .pw-item.answered{border-left-color:#2e7d32}
+  .pw-meta{display:flex;justify-content:space-between;font-size:.75rem;opacity:.75;margin-bottom:8px}
+  .pw-tag{background:#fdecea;color:#b3202f;padding:3px 10px;border-radius:999px;font-weight:700;font-size:.68rem;text-transform:uppercase}
+  .pw-badge-ans{background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:999px;font-weight:700;font-size:.68rem;margin-left:6px}
+  .pw-text{line-height:1.55;margin:0 0 12px;white-space:pre-line}
+  .pw-foot{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;gap:10px;flex-wrap:wrap}
+  .pw-pray{border:1px solid #4a0f3d;background:#fff;color:#4a0f3d;padding:7px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+  .pw-pray:disabled{background:#4a0f3d;color:#c9a84c;cursor:default}
+  .pw-mod{display:flex;gap:6px;flex-wrap:wrap}
+  .pw-mod button{border:0;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:.78rem;color:#fff}
+  .pw-mod .a{background:#2e7d32}.pw-mod .r{background:#b71c1c}.pw-mod .n{background:#4a0f3d}
+  .pw-empty{text-align:center;padding:30px;opacity:.7}
+  .pw-queue{border-left-color:#c9a84c;background:#fffaf0}
+</style>
 
-<!-- ══════════════ PAGE MAIN ══════════════ -->
 <main id="main-content">
 
-  <!-- ═══════════════════════════════════
-       HERO SECTION
-  ════════════════════════════════════ -->
-  <section class="prayer-hero" aria-label="Prayer Wall at Shammah Urban Church">
+  <!-- ═══ HERO ═══ -->
+  <link rel="stylesheet" href="css/prayer.css">
+
+  <section class="prayer-hero" aria-label="Prayer wall">
     <div class="prayer-hero-pattern" aria-hidden="true"></div>
     <div class="prayer-hero-inner">
-      <div class="hero-eyebrow">
-        <i class="ti ti-hand-stop" aria-hidden="true"></i>
-        Intercession &amp; Community
-      </div>
+      <div class="hero-eyebrow">Intercession &amp; Community</div>
       <h1>Prayer <em>Wall</em></h1>
+
       <p class="prayer-hero-verse">
-        <i class="ti ti-quote" aria-hidden="true"></i>
-        "Carry each other's burdens, and in this way you will fulfill the law of Christ."
+        <em>“Carry each other’s burdens, and in this way you will fulfill the law of Christ.”</em>
         <span>— Galatians 6:2</span>
       </p>
-      <!-- Live impact stats -->
-      <div class="prayer-hero-stats" aria-label="Prayer community statistics">
-        <div class="p-stat">
-          <strong><?= $total_requests ?>+</strong>
-          <span>Prayers Submitted</span>
-        </div>
+
+      <div class="prayer-hero-stats" aria-label="Prayer statistics">
+        <div class="p-stat"><strong><?= number_format($stat_submitted) ?>+</strong><span>Prayers Submitted</span></div>
         <div class="p-stat-divider" aria-hidden="true"></div>
-        <div class="p-stat">
-          <strong><?= number_format($total_prayers) ?>+</strong>
-          <span>Intercessions Made</span>
-        </div>
+        <div class="p-stat"><strong><?= number_format($stat_intercessions) ?>+</strong><span>Intercessions Made</span></div>
         <div class="p-stat-divider" aria-hidden="true"></div>
-        <div class="p-stat">
-          <strong><?= $total_answered ?></strong>
-          <span>Answered Prayers</span>
-        </div>
+        <div class="p-stat"><strong><?= number_format($stat_answered) ?></strong><span>Answered Prayers</span></div>
         <div class="p-stat-divider" aria-hidden="true"></div>
-        <div class="p-stat">
-          <strong><?= count($categories) ?></strong>
-          <span>Prayer Categories</span>
-        </div>
+        <div class="p-stat"><strong><?= (int) $stat_categories ?></strong><span>Prayer Categories</span></div>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════════════════════
-       BREADCRUMB
-  ════════════════════════════════════ -->
-  <nav class="breadcrumb-bar" aria-label="Breadcrumb">
+  <div class="breadcrumb-bar">
     <ol class="breadcrumb">
-      <li><a href="index.php"><i class="ti ti-home" aria-hidden="true"></i> Home</a></li>
+      <li><a href="index.php">Home</a></li>
       <li aria-current="page">Prayer Wall</li>
     </ol>
-  </nav>
+  </div>
 
-  <!-- ═══════════════════════════════════
-       MAIN CONTENT — TWO COLUMN LAYOUT
-       Left:  Submit a prayer request form
-       Right: Community prayer wall
-  ════════════════════════════════════ -->
-  <div class="section">
-    <div class="section-wide">
-      <div class="prayer-layout">
+  <?php if ($flash): ?>
+    <div class="pw-flash <?= $flash['ok'] ? 'ok' : 'err' ?>" role="alert"><?= h($flash['msg']) ?></div>
+  <?php endif; ?>
 
-        <!-- ══════════════════════════════
-             LEFT — SUBMIT FORM
-        ═══════════════════════════════ -->
-        <aside class="prayer-form-col" aria-label="Submit a prayer request">
+  <div class="pw-grid">
 
-          <div class="prayer-form-card">
-            <div class="form-card-header">
-              <i class="ti ti-send" aria-hidden="true"></i>
-              <div>
-                <div class="section-tag" style="margin-bottom:4px">Share Your Heart</div>
-                <h2 class="form-card-title">Submit a Prayer Request</h2>
+    <!-- ═══ SUBMIT FORM ═══ -->
+    <aside class="pw-card" id="submit">
+      <h2>Submit a Prayer Request</h2>
+      <form method="post" action="prayer.php" novalidate>
+        <input type="hidden" name="action" value="submit">
+        <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+
+        <label for="pw-name">Your Name</label>
+        <input type="text" id="pw-name" name="name" maxlength="80" required
+               value="<?= h($is_logged_in ? $user_name : '') ?>" <?= ($is_logged_in && $user_name !== '') ? 'readonly' : '' ?>>
+
+        <label style="font-weight:400"><input type="checkbox" name="anonymous" value="1">
+          Post anonymously — your name will not appear on the wall</label>
+
+        <label for="pw-cat">Category *</label>
+        <select id="pw-cat" name="category" required>
+          <option value="">Choose a category</option>
+          <?php foreach ($PRAYER_CATEGORIES as $c => $emoji): ?>
+            <option value="<?= h($c) ?>"><?= $emoji . ' ' . h($c) ?></option>
+          <?php endforeach; ?>
+        </select>
+
+        <label for="pw-text">Your Prayer Request *</label>
+        <textarea id="pw-text" name="request_text" maxlength="1000" required
+                  placeholder="Share what is on your heart…"></textarea>
+        <div class="pw-count"><span id="pw-chars">0</span> / 1000</div>
+
+        <button class="pw-btn" type="submit">🙏 Submit Prayer Request</button>
+        <?php if (PRAYER_NEEDS_APPROVAL && !$is_pastor): ?>
+          <p style="font-size:.75rem;opacity:.7;margin:10px 0 0">New requests appear on the wall after a pastor approves them.</p>
+        <?php endif; ?>
+      </form>
+    </aside>
+
+    <!-- ═══ WALL ═══ -->
+    <section aria-label="Community prayer wall">
+
+      <?php if ($is_pastor && $pending): ?>
+        <div class="pw-card" style="margin-bottom:22px">
+          <h3>Waiting for approval (<?= count($pending) ?>)</h3>
+          <?php foreach ($pending as $p): ?>
+            <div class="pw-item pw-queue">
+              <div class="pw-meta">
+                <span class="pw-tag"><?= h($p['category']) ?></span>
+                <span><?= h($p['display_name']) ?> · <?= time_ago($p['created_at']) ?></span>
               </div>
+              <p class="pw-text"><?= h($p['request_text']) ?></p>
+              <form method="post" class="pw-mod">
+                <input type="hidden" name="action" value="moderate">
+                <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+                <input type="hidden" name="id" value="<?= (int) $p['id'] ?>">
+                <button class="a" name="do" value="approve">Approve</button>
+                <button class="r" name="do" value="reject">Reject</button>
+              </form>
             </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
 
-            <div id="prayerForm" role="form" aria-label="Prayer request submission form">
-
-              <!-- Name -->
-              <div class="form-group">
-                <label for="reqName" class="form-label">
-                  <i class="ti ti-user" aria-hidden="true"></i>
-                  Your Name
-                </label>
-                <input type="text"
-                       id="reqName"
-                       class="form-input"
-                       placeholder="Your name (or leave blank for anonymous)"
-                       value="<?= $user_name ?>">
-              </div>
-
-              <!-- Anonymous toggle -->
-              <label class="anon-toggle" for="reqAnon">
-                <input type="checkbox" id="reqAnon" <?= !$is_logged_in ? 'checked' : '' ?>>
-                <span class="anon-box" aria-hidden="true"></span>
-                <span class="anon-label">Post anonymously — your name will not appear on the wall</span>
-              </label>
-
-              <!-- Category -->
-              <div class="form-group">
-                <label for="reqCategory" class="form-label">
-                  <i class="ti ti-tag" aria-hidden="true"></i>
-                  Category <span class="req-star" aria-hidden="true">*</span>
-                </label>
-                <select id="reqCategory" class="form-select" required aria-required="true">
-                  <option value="">— Select a category —</option>
-                  <?php foreach ($categories as $cat => $meta): ?>
-                    <option value="<?= htmlspecialchars($cat) ?>">
-                      <?= $meta['emoji'] ?> <?= htmlspecialchars($cat) ?>
-                    </option>
-                  <?php endforeach; ?>
-                </select>
-                <span class="field-error" id="reqCategoryErr" role="alert"></span>
-              </div>
-
-              <!-- Prayer request textarea -->
-              <div class="form-group">
-                <label for="reqMessage" class="form-label">
-                  <i class="ti ti-message-circle" aria-hidden="true"></i>
-                  Prayer Request <span class="req-star" aria-hidden="true">*</span>
-                </label>
-                <textarea id="reqMessage"
-                          class="form-textarea"
-                          rows="5"
-                          maxlength="500"
-                          placeholder="Share what's on your heart. This is a safe space — write as openly as you feel comfortable."
-                          required
-                          aria-required="true"
-                          aria-describedby="charCount"></textarea>
-                <!--
-                  Character counter — updated live by prayer.js.
-                  Shows remaining characters so submitter doesn't
-                  hit the 500-char limit unexpectedly.
-                -->
-                <div class="char-counter" id="charCount" aria-live="polite">
-                  <span id="charUsed">0</span> / 500 characters
-                </div>
-                <span class="field-error" id="reqMessageErr" role="alert"></span>
-              </div>
-
-              <!-- Public wall toggle -->
-              <label class="public-toggle" for="reqPublic">
-                <input type="checkbox" id="reqPublic" checked>
-                <span class="public-box" aria-hidden="true"></span>
-                <div class="public-label">
-                  <strong>Share on the Prayer Wall</strong>
-                  <small>Allow the community to see and pray for this request</small>
-                </div>
-              </label>
-
-              <button class="btn-submit-prayer" id="submitPrayer" type="button">
-                <i class="ti ti-hand-stop" aria-hidden="true"></i>
-                Submit Prayer Request
-              </button>
-
-              <!-- Privacy note -->
-              <p class="privacy-note">
-                <i class="ti ti-lock-square" aria-hidden="true"></i>
-                All requests are treated with care and confidentiality.
-                Private requests go only to our pastoral team.
-              </p>
-            </div>
-          </div>
-
-          <!-- Pastoral contact nudge -->
-          <div class="pastoral-card">
-            <div class="pastoral-icon" aria-hidden="true">
-              <i class="ti ti-user-heart"></i>
-            </div>
-            <div>
-              <h4>Need to speak to a pastor?</h4>
-              <p>Some burdens need more than prayer — they need a conversation. Our pastoral team is available for confidential one-on-one sessions.</p>
-              <a href="contact.php" class="btn-pastoral">
-                <i class="ti ti-message-circle" aria-hidden="true"></i>
-                Contact a Pastor
-              </a>
-            </div>
-          </div>
-
-        </aside>
-
-
-        <!-- ══════════════════════════════
-             RIGHT — PRAYER WALL
-        ═══════════════════════════════ -->
-        <section class="prayer-wall-col" aria-label="Community prayer wall">
-
-          <!-- Wall header -->
-          <div class="wall-header">
-            <div>
-              <div class="section-tag" style="margin-bottom:4px">Community Intercession</div>
-              <h2 class="wall-title">
-                Prayer <em>Wall</em>
-                <span class="wall-count" aria-label="<?= $wall_count ?> prayer requests"><?= $wall_count ?></span>
-              </h2>
-            </div>
-            <!-- Sort dropdown -->
-            <div class="wall-sort">
-              <label for="wallSort" class="sr-only">Sort prayers by</label>
-              <select id="wallSort" class="sort-select" aria-label="Sort prayer requests">
-                <option value="recent">Most Recent</option>
-                <option value="prayed">Most Prayed</option>
-                <option value="answered">Answered First</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Category filter pills -->
-          <div class="wall-filter" role="group" aria-label="Filter prayer requests by category">
-            <button class="wall-pill active" data-cat="all" aria-pressed="true">
-              All <span class="wall-pill-count"><?= $wall_count ?></span>
-            </button>
-            <?php foreach ($categories as $cat => $meta):
-              $cnt = count(array_filter($prayer_requests, fn($p) => $p['category'] === $cat));
-              if ($cnt === 0) continue;
-              $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $cat));
-            ?>
-            <button class="wall-pill" data-cat="<?= $slug ?>" aria-pressed="false"
-                    style="--cat-color:<?= $meta['color'] ?>">
-              <?= $meta['emoji'] ?> <?= htmlspecialchars($cat) ?>
-              <span class="wall-pill-count"><?= $cnt ?></span>
-            </button>
-            <?php endforeach; ?>
-          </div>
-
-          <!-- Prayer cards -->
-          <div class="prayer-cards" id="prayerCards">
-            <?php foreach ($prayer_requests as $req):
-              $cat  = $req['category'];
-              $meta = $categories[$cat] ?? ['color' => '#3D0C2F', 'icon' => 'ti-heart', 'emoji' => '🙏'];
-              $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $cat));
-            ?>
-            <!--
-              data-cat    – used by JS category filter
-              data-count  – used by JS sort (most prayed)
-              data-answered – used by JS sort (answered first)
-            -->
-            <article class="prayer-card <?= $req['is_answered'] ? 'is-answered' : '' ?>"
-                     data-cat="<?= $slug ?>"
-                     data-count="<?= $req['prayer_count'] ?>"
-                     data-answered="<?= $req['is_answered'] ? '1' : '0' ?>"
-                     aria-label="Prayer request: <?= htmlspecialchars($cat) ?><?= $req['is_answered'] ? ' — Answered' : '' ?>">
-
-              <!-- Left accent border colour from category -->
-              <div class="card-accent" style="background:<?= $meta['color'] ?>" aria-hidden="true"></div>
-
-              <div class="card-content">
-
-                <!-- Card top: category tag + timestamp -->
-                <div class="card-top">
-                  <span class="card-cat-tag" style="color:<?= $meta['color'] ?>;background:<?= $meta['color'] ?>1a">
-                    <i class="ti <?= $meta['icon'] ?>" aria-hidden="true"></i>
-                    <?= htmlspecialchars($cat) ?>
-                  </span>
-                  <span class="card-time">
-                    <i class="ti ti-clock" aria-hidden="true"></i>
-                    <?= htmlspecialchars($req['time_ago']) ?>
-                  </span>
-                </div>
-
-                <!-- Answered banner -->
-                <?php if ($req['is_answered']): ?>
-                <div class="answered-banner" role="status">
-                  <i class="ti ti-circle-check-filled" aria-hidden="true"></i>
-                  Prayer Answered! 🎉
-                </div>
-                <?php endif; ?>
-
-                <!-- Message -->
-                <p class="card-message"><?= htmlspecialchars($req['message']) ?></p>
-
-                <!-- Card bottom: name + praying button -->
-                <div class="card-bottom">
-                  <span class="card-name">
-                    <i class="ti ti-user-circle" aria-hidden="true"></i>
-                    — <?= htmlspecialchars($req['name']) ?>
-                    <?php if ($req['is_anonymous']): ?>
-                      <span class="anon-tag" aria-label="Anonymous submission">anon</span>
-                    <?php endif; ?>
-                  </span>
-
-                  <div class="card-actions">
-                    <!--
-                      Praying button:
-                      - data-id links to the prayer request
-                      - data-count is the starting count (for JS increment)
-                      - If member already prayed, .prayed class is added
-                      - If not logged in, JS shows a tooltip
-                    -->
-                    <button class="btn-praying <?= $req['member_prayed'] ? 'prayed' : '' ?>"
-                            data-id="<?= $req['id'] ?>"
-                            data-count="<?= $req['prayer_count'] ?>"
-                            data-logged-in="<?= $is_logged_in ? '1' : '0' ?>"
-                            aria-label="<?= $req['member_prayed'] ? 'You are praying for this request' : 'Pray for this request' ?>"
-                            aria-pressed="<?= $req['member_prayed'] ? 'true' : 'false' ?>">
-                      <i class="ti ti-hand-stop" aria-hidden="true"></i>
-                      <span class="praying-label"><?= $req['member_prayed'] ? 'Praying' : 'Pray' ?></span>
-                      <span class="praying-count" aria-label="<?= $req['prayer_count'] ?> people praying">
-                        <?= $req['prayer_count'] ?>
-                      </span>
-                    </button>
-
-                    <?php if (!$req['is_answered']): ?>
-                    <!--
-                      Answered toggle:
-                      Only the original submitter would see this in a real app
-                      (check member_id). Here we show it for all logged-in users
-                      for demonstration purposes.
-                    -->
-                    <?php if ($is_logged_in): ?>
-                    <button class="btn-answered"
-                            data-id="<?= $req['id'] ?>"
-                            aria-label="Mark this prayer as answered">
-                      <i class="ti ti-circle-check" aria-hidden="true"></i>
-                      Answered?
-                    </button>
-                    <?php endif; ?>
-                    <?php endif; ?>
-                  </div>
-                </div>
-
-              </div><!-- /card-content -->
-            </article>
-            <?php endforeach; ?>
-          </div><!-- /prayer-cards -->
-
-          <!-- No results state -->
-          <div class="no-prayers" id="noPrayers" aria-live="polite">
-            <i class="ti ti-search-off" aria-hidden="true"></i>
-            <p>No prayer requests in this category yet.</p>
-          </div>
-
-          <!-- Guest prompt (shown when guest clicks Praying) -->
-          <div class="guest-toast" id="guestToast" role="alert" aria-live="polite">
-            <i class="ti ti-lock" aria-hidden="true"></i>
-            <span>Please <a href="login.php">log in</a> to mark yourself as praying</span>
-          </div>
-
-        </section><!-- /prayer-wall-col -->
-
-      </div><!-- /prayer-layout -->
-    </div><!-- /section-wide -->
-  </div><!-- /section -->
-
-
-  <!-- ═══════════════════════════════════
-       DAILY VERSE SECTION
-       Pulls from $verse in data.php —
-       the same verse shown on the home page.
-  ════════════════════════════════════ -->
-  <section class="verse-section section" aria-label="Daily scripture">
-    <div class="section-narrow" style="text-align:center">
-      <div class="section-tag">Today's Word</div>
-      <h2 class="section-title">A <em>Scripture</em> to Carry With You</h2>
-      <blockquote class="verse-card">
-        <div class="verse-deco" aria-hidden="true">"</div>
-        <p class="verse-text"><?= nl2br(htmlspecialchars(trim($verse['text']))) ?></p>
-        <footer class="verse-ref">
-          <span>— <?= htmlspecialchars($verse['ref']) ?></span>
-        </footer>
-      </blockquote>
-      <p class="section-sub" style="margin:0 auto;margin-top:16px">
-        Our pastoral team prays through the church prayer wall every Monday morning.
-        Your request will be lifted before God.
-      </p>
-    </div>
-  </section>
-
-
-  <!-- ═══════════════════════════════════
-       CTA SECTION
-  ════════════════════════════════════ -->
-  <section class="prayer-cta section" aria-label="Join the prayer community">
-    <div class="section-narrow" style="text-align:center">
-      <div class="section-tag">Get Connected</div>
-      <h2 class="section-title">Want to Pray <em>Together?</em></h2>
-      <p class="section-sub" style="margin:0 auto 28px">
-        Join our monthly prayer nights and become part of our intercession team.
-        There is power in corporate prayer.
-      </p>
-      <div class="cta-btns">
-        <a href="events.php" class="btn-gold">
-          <i class="ti ti-calendar-event" aria-hidden="true"></i>
-          View Prayer Night Events
-        </a>
-        <a href="volunteers.php" class="btn-outline-navy-light">
-          <i class="ti ti-heart-handshake" aria-hidden="true"></i>
-          Join the Prayer Team
-        </a>
+      <div class="pw-head">
+        <h2 style="margin:0;font-family:Georgia,serif;color:#3d0f33">Prayer <em>Wall</em></h2>
+        <form method="get">
+          <?php if ($cat !== ''): ?><input type="hidden" name="cat" value="<?= h($cat) ?>"><?php endif; ?>
+          <select name="sort" onchange="this.form.submit()" aria-label="Sort prayers">
+            <option value="recent" <?= $sort === 'recent' ? 'selected' : '' ?>>Most Recent</option>
+            <option value="prayed" <?= $sort === 'prayed' ? 'selected' : '' ?>>Most Prayed For</option>
+          </select>
+        </form>
       </div>
-    </div>
-  </section>
 
+      <div class="pw-chips">
+        <a class="pw-chip <?= $cat === '' ? 'on' : '' ?>" href="prayer.php?sort=<?= h($sort) ?>">All <small><?= $total_live ?></small></a>
+        <?php foreach ($PRAYER_CATEGORIES as $c => $emoji): ?>
+          <a class="pw-chip <?= $cat === $c ? 'on' : '' ?>" href="prayer.php?cat=<?= urlencode($c) ?>&sort=<?= h($sort) ?>">
+            <?= $emoji . ' ' . h($c) ?> <small><?= $cat_counts[$c] ?? 0 ?></small>
+          </a>
+        <?php endforeach; ?>
+      </div>
+
+      <?php if (!$prayers): ?>
+        <div class="pw-empty">No prayers here yet. Be the first to share.</div>
+      <?php endif; ?>
+
+      <?php foreach ($prayers as $p):
+            $pid   = (int) $p['id'];
+            $name  = $p['is_anonymous'] ? 'Anonymous' : $p['display_name'];
+            $done  = isset($already[$pid]); ?>
+        <article class="pw-item <?= $p['status'] === 'answered' ? 'answered' : '' ?>">
+          <div class="pw-meta">
+            <span>
+              <span class="pw-tag"><?= h($p['category']) ?></span>
+              <?php if ($p['status'] === 'answered'): ?><span class="pw-badge-ans">✓ Answered</span><?php endif; ?>
+            </span>
+            <span><?= time_ago($p['created_at']) ?></span>
+          </div>
+          <p class="pw-text"><?= h($p['request_text']) ?></p>
+          <div class="pw-foot">
+            <span>— <?= h($name) ?></span>
+            <span>
+              <span id="cnt-<?= $pid ?>"><?= (int) $p['prayed_count'] ?></span> prayed
+              <button class="pw-pray" data-id="<?= $pid ?>" <?= $done ? 'disabled' : '' ?>>
+                <?= $done ? '🙏 You prayed' : '🙏 I prayed' ?>
+              </button>
+            </span>
+          </div>
+          <?php if ($is_pastor): ?>
+            <form method="post" class="pw-mod" style="margin-top:10px">
+              <input type="hidden" name="action" value="moderate">
+              <input type="hidden" name="csrf" value="<?= h($_SESSION['csrf_token']) ?>">
+              <input type="hidden" name="id" value="<?= $pid ?>">
+              <?php if ($p['status'] !== 'answered'): ?><button class="a" name="do" value="answered">Mark answered</button><?php endif; ?>
+              <button class="r" name="do" value="reject">Remove</button>
+            </form>
+          <?php endif; ?>
+        </article>
+      <?php endforeach; ?>
+
+    </section>
+  </div>
 </main>
+
+<script>
+  const PW_CSRF = <?= json_encode($_SESSION['csrf_token']) ?>;
+
+  /* character counter */
+  const pwText = document.getElementById('pw-text');
+  const pwChars = document.getElementById('pw-chars');
+  if (pwText) pwText.addEventListener('input', () => pwChars.textContent = pwText.value.length);
+
+  /* "I prayed" buttons */
+  document.querySelectorAll('.pw-pray').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        const body = new URLSearchParams({ action: 'pray', id: btn.dataset.id, csrf: PW_CSRF });
+        const res  = await fetch('prayer.php', { method: 'POST', body });
+        const data = await res.json();
+        if (data.ok) {
+          document.getElementById('cnt-' + btn.dataset.id).textContent = data.count;
+          btn.textContent = '🙏 You prayed';
+        } else {
+          btn.disabled = false;
+          alert(data.msg || 'Could not record your prayer.');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        alert('Connection problem. Please try again.');
+      }
+    });
+  });
+</script>
 
 <?php require_once 'includes/footer.php'; ?>
