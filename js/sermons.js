@@ -24,7 +24,7 @@
  * $(selector) – shorthand for querySelector
  * $$(selector) – shorthand for querySelectorAll
  */
-const $  = (s, ctx = document) => ctx.querySelector(s);
+const $ = (s, ctx = document) => ctx.querySelector(s);
 const $$ = (s, ctx = document) => [...ctx.querySelectorAll(s)];
 
 
@@ -33,7 +33,7 @@ const $$ = (s, ctx = document) => [...ctx.querySelectorAll(s)];
    Clicking a tab button shows/hides the
    matching .tab-panel using data-tab attr.
 ──────────────────────────────────────── */
-const tabBtns   = $$('.s-tab');
+const tabBtns = $$('.s-tab');
 const tabPanels = $$('.tab-panel');
 
 /**
@@ -42,25 +42,25 @@ const tabPanels = $$('.tab-panel');
  * @param {string} tabId – value of data-tab attribute
  */
 function activateTab(tabId) {
-  tabBtns.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabId);
-    // aria-selected communicates state to screen readers
-    btn.setAttribute('aria-selected', btn.dataset.tab === tabId);
-  });
-  tabPanels.forEach(panel => {
-    panel.classList.toggle('active', panel.id === `tab-${tabId}`);
-  });
+    tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+        // aria-selected communicates state to screen readers
+        btn.setAttribute('aria-selected', btn.dataset.tab === tabId);
+    });
+    tabPanels.forEach(panel => {
+        panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+    });
 }
 
 tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => activateTab(btn.dataset.tab));
-  // Keyboard: Space or Enter activates a tab (accessibility)
-  btn.addEventListener('keydown', (e) => {
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      activateTab(btn.dataset.tab);
-    }
-  });
+    btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    // Keyboard: Space or Enter activates a tab (accessibility)
+    btn.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            activateTab(btn.dataset.tab);
+        }
+    });
 });
 
 
@@ -74,18 +74,18 @@ tabBtns.forEach(btn => {
    We read these and hide/show cards that
    do not match the current filter state.
 ──────────────────────────────────────── */
-const searchInput    = $('#sermonSearch');
-const seriesSelect   = $('#seriesFilter');
-const yearSelect     = $('#yearFilter');
-const speakerSelect  = $('#speakerFilter');
-const clearBtn       = $('#clearFilters');
-const resultsLabel   = $('#resultsCount');
-const noResults      = $('#noResults');
-const allCards       = $$('.sermon-card');
+const searchInput = $('#sermonSearch');
+const seriesSelect = $('#seriesFilter');
+const yearSelect = $('#yearFilter');
+const speakerSelect = $('#speakerFilter');
+const clearBtn = $('#clearFilters');
+const resultsLabel = $('#resultsCount');
+const noResults = $('#noResults');
+const allCards = $$('.sermon-card');
 
 /** Current pagination state */
-let currentPage  = 1;
-const PAGE_SIZE  = 4; // cards per page
+let currentPage = 1;
+const PAGE_SIZE = 4; // cards per page
 
 /**
  * applyFilters – reads all filter values and
@@ -94,31 +94,31 @@ const PAGE_SIZE  = 4; // cards per page
  *                and pagination.
  */
 function applyFilters() {
-  const query   = searchInput.value.toLowerCase().trim();
-  const series  = seriesSelect.value;
-  const year    = yearSelect.value;
-  const speaker = speakerSelect.value;
+    const query = searchInput.value.toLowerCase().trim();
+    const series = seriesSelect.value;
+    const year = yearSelect.value;
+    const speaker = speakerSelect.value;
 
-  // Determine whether any filter is active
-  const hasFilter = query || series || year || speaker;
-  clearBtn.classList.toggle('visible', !!hasFilter);
+    // Determine whether any filter is active
+    const hasFilter = query || series || year || speaker;
+    clearBtn.classList.toggle('visible', !!hasFilter);
 
-  // Filter: collect matching cards
-  const matchingCards = allCards.filter(card => {
-    const titleMatch   = card.dataset.title.toLowerCase().includes(query);
-    const speakerMatch = card.dataset.speaker.toLowerCase().includes(query);
-    const textMatch    = titleMatch || speakerMatch;
-    const seriesMatch  = !series  || card.dataset.series  === series;
-    const yearMatch    = !year    || card.dataset.year     === year;
-    const spkMatch     = !speaker || card.dataset.speaker  === speaker;
-    return textMatch && seriesMatch && yearMatch && spkMatch;
-  });
+    // Filter: collect matching cards
+    const matchingCards = allCards.filter(card => {
+        const titleMatch = card.dataset.title.toLowerCase().includes(query);
+        const speakerMatch = card.dataset.speaker.toLowerCase().includes(query);
+        const textMatch = titleMatch || speakerMatch;
+        const seriesMatch = !series || card.dataset.series === series;
+        const yearMatch = !year || card.dataset.year === year;
+        const spkMatch = !speaker || card.dataset.speaker === speaker;
+        return textMatch && seriesMatch && yearMatch && spkMatch;
+    });
 
-  // Reset to page 1 whenever filters change
-  currentPage = 1;
+    // Reset to page 1 whenever filters change
+    currentPage = 1;
 
-  // Update UI
-  renderPage(matchingCards);
+    // Update UI
+    renderPage(matchingCards);
 }
 
 /**
@@ -128,30 +128,30 @@ function applyFilters() {
  * @param {HTMLElement[]} cards – filtered card list
  */
 function renderPage(cards) {
-  const total    = cards.length;
-  const start    = (currentPage - 1) * PAGE_SIZE;
-  const end      = start + PAGE_SIZE;
-  const pageCards = cards.slice(start, end);
+    const total = cards.length;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    const pageCards = cards.slice(start, end);
 
-  // Show / hide each card
-  allCards.forEach(c => c.style.display = 'none');
-  pageCards.forEach(c => c.style.display = 'flex');
+    // Show / hide each card
+    allCards.forEach(c => c.style.display = 'none');
+    pageCards.forEach(c => c.style.display = 'flex');
 
-  // Results counter e.g. "Showing 4 of 8 sermons"
-  const showing = Math.min(end, total) - start;
-  resultsLabel.innerHTML = `Showing <strong>${showing}</strong> of <strong>${total}</strong> sermon${total !== 1 ? 's' : ''}`;
+    // Results counter e.g. "Showing 4 of 8 sermons"
+    const showing = Math.min(end, total) - start;
+    resultsLabel.innerHTML = `Showing <strong>${showing}</strong> of <strong>${total}</strong> sermon${total !== 1 ? 's' : ''}`;
 
-  // No-results message
-  noResults.style.display = total === 0 ? 'block' : 'none';
+    // No-results message
+    noResults.style.display = total === 0 ? 'block' : 'none';
 
-  // Re-render pagination
-  renderPagination(total);
+    // Re-render pagination
+    renderPagination(total);
 }
 
 /* Attach filter listeners */
-searchInput.addEventListener('input',  applyFilters);
+searchInput.addEventListener('input', applyFilters);
 seriesSelect.addEventListener('change', applyFilters);
-yearSelect.addEventListener('change',  applyFilters);
+yearSelect.addEventListener('change', applyFilters);
 speakerSelect.addEventListener('change', applyFilters);
 
 
@@ -159,12 +159,12 @@ speakerSelect.addEventListener('change', applyFilters);
    4. CLEAR FILTERS
 ──────────────────────────────────────── */
 clearBtn.addEventListener('click', () => {
-  searchInput.value  = '';
-  seriesSelect.value = '';
-  yearSelect.value   = '';
-  speakerSelect.value = '';
-  applyFilters();
-  searchInput.focus();
+    searchInput.value = '';
+    seriesSelect.value = '';
+    yearSelect.value = '';
+    speakerSelect.value = '';
+    applyFilters();
+    searchInput.focus();
 });
 
 
@@ -174,7 +174,7 @@ clearBtn.addEventListener('click', () => {
    sermon grid and keeps the total count
    accurate after filtering.
 ──────────────────────────────────────── */
-const paginationEl   = $('#paginationBtns');
+const paginationEl = $('#paginationBtns');
 const paginationInfo = $('#paginationInfo');
 
 /**
@@ -182,45 +182,45 @@ const paginationInfo = $('#paginationInfo');
  * @param {number} total – total matching cards
  */
 function renderPagination(total) {
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+    const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  // Update "Showing X–Y of Z" info text
-  const start = (currentPage - 1) * PAGE_SIZE + 1;
-  const end   = Math.min(currentPage * PAGE_SIZE, total);
-  paginationInfo.textContent = total > 0
-    ? `Showing ${start}–${end} of ${total} sermons`
-    : '';
+    // Update "Showing X–Y of Z" info text
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end = Math.min(currentPage * PAGE_SIZE, total);
+    paginationInfo.textContent = total > 0
+        ? `Showing ${start}–${end} of ${total} sermons`
+        : '';
 
-  // Build pagination buttons
-  paginationEl.innerHTML = '';
+    // Build pagination buttons
+    paginationEl.innerHTML = '';
 
-  if (totalPages <= 1) return; // no buttons needed for ≤1 page
+    if (totalPages <= 1) return; // no buttons needed for ≤1 page
 
-  // ← Previous button
-  const prev = makePageBtn('‹', () => {
-    currentPage--;
-    applyFilters(); // re-filter will call renderPage → renderPagination
-  });
-  if (currentPage === 1) prev.disabled = true;
-  paginationEl.appendChild(prev);
-
-  // Numbered page buttons
-  for (let i = 1; i <= totalPages; i++) {
-    const btn = makePageBtn(i, () => {
-      currentPage = i;
-      applyFilters();
+    // ← Previous button
+    const prev = makePageBtn('‹', () => {
+        currentPage--;
+        applyFilters(); // re-filter will call renderPage → renderPagination
     });
-    if (i === currentPage) btn.classList.add('active');
-    paginationEl.appendChild(btn);
-  }
+    if (currentPage === 1) prev.disabled = true;
+    paginationEl.appendChild(prev);
 
-  // → Next button
-  const next = makePageBtn('›', () => {
-    currentPage++;
-    applyFilters();
-  });
-  if (currentPage === totalPages) next.disabled = true;
-  paginationEl.appendChild(next);
+    // Numbered page buttons
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = makePageBtn(i, () => {
+            currentPage = i;
+            applyFilters();
+        });
+        if (i === currentPage) btn.classList.add('active');
+        paginationEl.appendChild(btn);
+    }
+
+    // → Next button
+    const next = makePageBtn('›', () => {
+        currentPage++;
+        applyFilters();
+    });
+    if (currentPage === totalPages) next.disabled = true;
+    paginationEl.appendChild(next);
 }
 
 /**
@@ -229,11 +229,11 @@ function renderPagination(total) {
  * @param {Function}      onClick
  */
 function makePageBtn(label, onClick) {
-  const btn = document.createElement('button');
-  btn.className = 'page-btn';
-  btn.textContent = label;
-  btn.addEventListener('click', onClick);
-  return btn;
+    const btn = document.createElement('button');
+    btn.className = 'page-btn';
+    btn.textContent = label;
+    btn.addEventListener('click', onClick);
+    return btn;
 }
 
 // Initial render: show all cards on load
@@ -241,41 +241,39 @@ applyFilters();
 
 
 /* ──────────────────────────────────────
-   6. AUDIO PLAYER TOGGLE
-   Each "🎧 Listen" button reveals a mini
-   audio player strip below its card.
-   Clicking again collapses it.
+   6. LISTEN (sermons that have an audio file)
+   "Listen" reveals a real <audio> player under the card.
+   Clicking again hides it. Only one plays at a time.
+   (Sermons without an audio file get a Listen link that
+   opens the video pop-up instead — see section 11.)
 ──────────────────────────────────────── */
-$$('.listen-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const player = btn.closest('.sermon-card, .featured-sermon').querySelector('.audio-player');
-    if (!player) return;
-
-    const isVisible = player.classList.contains('visible');
-    // Close any other open players first
-    $$('.audio-player.visible').forEach(p => {
-      p.classList.remove('visible');
-      p.classList.remove('paused');
-      const playBtn = p.querySelector('.audio-play-btn');
-      if (playBtn) playBtn.innerHTML = '<i class="ti ti-player-play-filled"></i>';
+function stopAllAudio(exceptPlayer) {
+    $$('.audio-player').forEach(p => {
+        if (p === exceptPlayer) return;
+        p.classList.remove('visible');
+        const a = p.querySelector('audio');
+        if (a) a.pause();
     });
-    // Toggle this one
-    if (!isVisible) {
-      player.classList.add('visible');
-      showToast('Audio player ready — click ▶ to play', 'success', 3000);
-    }
-  });
-});
+}
 
-/* Play/pause the waveform animation */
-$$('.audio-play-btn').forEach(playBtn => {
-  playBtn.addEventListener('click', () => {
-    const player = playBtn.closest('.audio-player');
-    const isPaused = player.classList.toggle('paused');
-    playBtn.innerHTML = isPaused
-      ? '<i class="ti ti-player-play-filled"></i>'
-      : '<i class="ti ti-player-pause-filled"></i>';
-  });
+$$('.listen-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const player = btn.closest('.sermon-card, .featured-sermon').querySelector('.audio-player');
+        if (!player) return;
+
+        const opening = !player.classList.contains('visible');
+        stopAllAudio(player);
+        player.classList.toggle('visible', opening);
+
+        const audio = player.querySelector('audio');
+        if (audio) {
+            if (opening) {
+                audio.play().catch(() => { /* browser blocked autoplay – the user can press ▶ */ });
+            } else {
+                audio.pause();
+            }
+        }
+    });
 });
 
 
@@ -286,16 +284,16 @@ $$('.audio-play-btn').forEach(playBtn => {
    toast notification.
 ──────────────────────────────────────── */
 $$('.share-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const sermonTitle = btn.dataset.title || 'sermon';
-    const shareUrl = `${window.location.origin}${window.location.pathname}?sermon=${encodeURIComponent(sermonTitle)}`;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast('Link copied to clipboard! 📋', 'success', 3000);
-    }).catch(() => {
-      // Fallback if clipboard API not available
-      showToast('Share: ' + shareUrl, 'warn', 5000);
+    btn.addEventListener('click', () => {
+        const sermonTitle = btn.dataset.title || 'sermon';
+        const shareUrl = `${window.location.origin}${window.location.pathname}?sermon=${encodeURIComponent(sermonTitle)}`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showToast('Link copied to clipboard! 📋', 'success', 3000);
+        }).catch(() => {
+            // Fallback if clipboard API not available
+            showToast('Share: ' + shareUrl, 'warn', 5000);
+        });
     });
-  });
 });
 
 
@@ -306,17 +304,17 @@ $$('.share-btn').forEach(btn => {
    the series filter dropdown.
 ──────────────────────────────────────── */
 $$('.series-tile').forEach(tile => {
-  tile.addEventListener('click', () => {
-    const seriesName = tile.dataset.series;
-    // Switch to All tab
-    activateTab('all');
-    // Set the series dropdown
-    seriesSelect.value = seriesName;
-    // Scroll to search bar
-    $('#sermonSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    applyFilters();
-    showToast(`Filtering by series: ${seriesName}`, 'success', 2500);
-  });
+    tile.addEventListener('click', () => {
+        const seriesName = tile.dataset.series;
+        // Switch to All tab
+        activateTab('all');
+        // Set the series dropdown
+        seriesSelect.value = seriesName;
+        // Scroll to search bar
+        $('#sermonSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        applyFilters();
+        showToast(`Filtering by series: ${seriesName}`, 'success', 2500);
+    });
 });
 
 
@@ -325,26 +323,80 @@ $$('.series-tile').forEach(tile => {
    Same as series tiles but filters by speaker.
 ──────────────────────────────────────── */
 $$('.speaker-card').forEach(card => {
-  card.addEventListener('click', () => {
-    const spkName = card.dataset.speaker;
-    activateTab('all');
-    speakerSelect.value = spkName;
-    $('#sermonSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    applyFilters();
-    showToast(`Showing sermons by ${spkName}`, 'success', 2500);
-  });
+    card.addEventListener('click', () => {
+        const spkName = card.dataset.speaker;
+        activateTab('all');
+        speakerSelect.value = spkName;
+        $('#sermonSearch').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        applyFilters();
+        showToast(`Showing sermons by ${spkName}`, 'success', 2500);
+    });
 });
 
 
 /* ──────────────────────────────────────
-   NOTES BUTTON — unavailable state
-   If notes aren't ready yet, show a toast
-   instead of trying to open a file.
+   11. WATCH / LISTEN → VIDEO POP-UP
+   Buttons with class .js-watch carry:
+     href        – where to go if there is no embeddable video
+                   (the YouTube video, or a search of the channel)
+     data-embed  – YouTube embed URL (only when we know the video)
+   With data-embed  → play inside the page.
+   Without it       → the normal link opens YouTube in a new tab.
+   The big play circle / list thumbnail also trigger their Watch button.
 ──────────────────────────────────────── */
-$$('.c-btn.notes.unavailable').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    showToast('Sermon notes coming soon for this message', 'warn', 3000);
-  });
+const videoModal = $('#videoModal');
+const videoFrame = $('#videoModalFrame');
+const videoTitle = $('#videoModalTitle');
+const videoYT = $('#videoModalYT');
+let lastTrigger = null;
+
+function openVideo(embed, title, href, audioOnly) {
+    stopAllAudio(null);                         // pause any inline audio first
+    lastTrigger = document.activeElement;
+    videoTitle.textContent = (audioOnly ? 'Listen: ' : '') + title;
+    videoYT.href = href;
+    videoFrame.src = embed;
+    videoModal.classList.toggle('audio-only', !!audioOnly);
+    videoModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    $('#videoModalClose').focus();
+}
+
+function closeVideo() {
+    if (videoModal.hidden) return;
+    videoFrame.src = '';                        // stops playback
+    videoModal.hidden = true;
+    document.body.style.overflow = '';
+    if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
+}
+
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('.js-watch');
+    if (!link) return;
+    const embed = link.dataset.embed;
+    if (!embed) return;                         // no video id → let the link open YouTube
+    e.preventDefault();
+    openVideo(embed, link.dataset.title || 'Sermon', link.href, link.dataset.audio === '1');
 });
 
+/* Big play circle / card thumbnail → trigger that sermon's Watch button */
+$$('[data-watch-for]').forEach(el => {
+    const go = () => { const t = document.getElementById(el.dataset.watchFor); if (t) t.click(); };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+});
+
+$('#videoModalClose').addEventListener('click', closeVideo);
+videoModal.addEventListener('click', (e) => { if (e.target === videoModal) closeVideo(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeVideo(); });
+
+
+/* Notes unavailable – friendlier message with a way to ask */
+$$('.c-btn.notes.unavailable').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showToast('Notes for this message are not uploaded yet — ask us on the Contact page.', 'warn', 4000);
+    }, true);
+});

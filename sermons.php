@@ -24,6 +24,7 @@
 ═══════════════════════════════════════ */
 session_start();
 require_once 'includes/data.php';
+require_once 'includes/db.php';   // $pdo – sermons now come from the SERMON table
 
 /* ── AUTH STATE ─────────────────────── */
 $is_logged_in = isset($_SESSION['member_id']);
@@ -52,7 +53,7 @@ $page_desc  = 'Watch, listen or read sermons from Shammah Urban Church in Pretor
    is_live     – 1 = currently streaming, 0 = recorded
    popular     – true = show 🔥 badge
 ══════════════════════════════════════ */
-$sermons = [
+$sermons_fallback = [   // only used if the SERMON table is empty
   [
     'id'        => 1,
     'title'     => 'Walking in Faith',
@@ -63,8 +64,8 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '52 min',
     'desc'      => 'A powerful message on trusting God through seasons of uncertainty, drawn from the faith hall of fame in Hebrews 11.',
-    'video_url' => 'https://www.youtube.com/watch?v=example1',
-    'notes_url' => 'notes/walking-in-faith.pdf',
+    'video_url' => '',
+    'notes_url' => null,
     'is_live'   => 0,
     'popular'   => true,
   ],
@@ -78,8 +79,8 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '48 min',
     'desc'      => 'Every morning brings a fresh measure of God\'s mercy. This message unpacks the inexhaustible grace available to every believer.',
-    'video_url' => 'https://www.youtube.com/watch?v=example2',
-    'notes_url' => 'notes/gods-grace-renewed.pdf',
+    'video_url' => '',
+    'notes_url' => null,
     'is_live'   => 0,
     'popular'   => false,
   ],
@@ -93,7 +94,7 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '35 min',
     'desc'      => 'What does it really mean to pray continually? Elder Nkosi unpacks the lifestyle of prayer and its transforming power.',
-    'video_url' => 'https://www.youtube.com/watch?v=example3',
+    'video_url' => '',
     'notes_url' => null,
     'is_live'   => 0,
     'popular'   => true,
@@ -108,8 +109,8 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '55 min',
     'desc'      => 'The early church thrived because they were devoted to one another. This message calls us back to authentic community.',
-    'video_url' => 'https://www.youtube.com/watch?v=example4',
-    'notes_url' => 'notes/power-of-community.pdf',
+    'video_url' => '',
+    'notes_url' => null,
     'is_live'   => 0,
     'popular'   => false,
   ],
@@ -123,7 +124,7 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '42 min',
     'desc'      => 'A moving message on finding strength and renewed hope in the most difficult seasons of life.',
-    'video_url' => 'https://www.youtube.com/watch?v=example5',
+    'video_url' => '',
     'notes_url' => null,
     'is_live'   => 0,
     'popular'   => false,
@@ -138,8 +139,8 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '47 min',
     'desc'      => 'Unpacking the full armour of God and how to stand firm against spiritual opposition in everyday life.',
-    'video_url' => 'https://www.youtube.com/watch?v=example6',
-    'notes_url' => 'notes/warfare-in-the-spirit.pdf',
+    'video_url' => '',
+    'notes_url' => null,
     'is_live'   => 0,
     'popular'   => false,
   ],
@@ -153,7 +154,7 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '38 min',
     'desc'      => 'Practical biblical wisdom for mothers and parents on how to nurture faith in the next generation.',
-    'video_url' => 'https://www.youtube.com/watch?v=example7',
+    'video_url' => '',
     'notes_url' => null,
     'is_live'   => 0,
     'popular'   => false,
@@ -168,12 +169,149 @@ $sermons = [
     'year'      => '2025',
     'duration'  => '50 min',
     'desc'      => 'Like Nehemiah rebuilding Jerusalem\'s walls, God calls His people to rebuild broken things with prayer and purpose.',
-    'video_url' => 'https://www.youtube.com/watch?v=example8',
-    'notes_url' => 'notes/the-restored-church.pdf',
+    'video_url' => '',
+    'notes_url' => null,
     'is_live'   => 0,
     'popular'   => true,
   ],
 ];
+
+
+/* ══════════════════════════════════════
+   WATCH / LISTEN / NOTES LINKS
+   ──────────────────────────────────────
+   Set your church's YouTube channel here. It is used whenever a
+   sermon has no direct video link yet: the Watch button then opens
+   a search for that sermon's title INSIDE your channel, so people
+   can still find the video.
+══════════════════════════════════════ */
+/* TEMPORARY: until the church has its own YouTube channel, Watch/Listen send people to
+   Hillsong Africa (a South African church channel) so they can find church content.
+   WHEN YOU CREATE YOUR OWN CHANNEL:
+     1. put its URL in $YT_CHANNEL
+     2. set $YT_SEARCH_IN_CHANNEL = true  (Watch then searches your channel for each sermon title)
+     3. better still, paste each sermon's video link into SERMON.video_url (plays in the pop-up) */
+$YT_CHANNEL           = 'https://www.youtube.com/channel/UCygJwTvQL4N7zU1ch9a23hg';   // Hillsong Africa
+$YT_SEARCH_IN_CHANNEL = false;
+
+function h($v): string { return htmlspecialchars((string) $v, ENT_QUOTES); }
+
+/* Only allow http(s) links, or a relative file path (e.g. notes/x.pdf). Blocks javascript: etc. */
+function safe_url(?string $u): string {
+  $u = trim((string) $u);
+  if ($u === '') return '';
+  if (preg_match('~^https?://~i', $u)) return $u;
+  if (preg_match('~^[a-z][a-z0-9+.-]*:~i', $u) || str_starts_with($u, '//')) return '';
+  return $u;
+}
+
+/* Pull the 11-character YouTube video ID out of watch / youtu.be / live / shorts / embed links */
+function yt_id(string $u): ?string {
+  return preg_match('~(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:[^#]*&)?v=|embed/|live/|shorts/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})~', $u, $m)
+         ? $m[1] : null;
+}
+
+/* Work out what the Watch / Listen buttons should do for one sermon */
+function resolve_media(array $s, string $channel, bool $searchInChannel): array {
+  $vu    = safe_url($s['video_url'] ?? '');
+  // db_setup.sql seeded a made-up channel (@shammahurbanchurch) that does not exist – treat it as 'no link yet'
+  if (stripos($vu, '@shammahurbanchurch') !== false) { $vu = ''; }
+  $id    = $vu ? yt_id($vu) : null;
+  $embed = '';
+  if ($id) {
+    // A real video → plays inside the page
+    $embed = 'https://www.youtube-nocookie.com/embed/' . $id . '?autoplay=1&rel=0';
+    $href  = 'https://www.youtube.com/watch?v=' . $id;
+  } else {
+    $base = $vu ?: $channel;
+    // Channel / playlist link → search the channel for this sermon's title
+    $isChannel = preg_match('~youtube\.com/(@|channel/|c/|user/)~i', $base) && strpos($base, '/search') === false;
+    $href = !$isChannel ? $base
+          : rtrim($base, '/') . ($searchInChannel ? '/search?query=' . rawurlencode($s['title']) : '/videos');
+  }
+  $s['embed']     = $embed;
+  $s['watch_href'] = $href;
+  $s['audio_url'] = safe_url($s['audio_url'] ?? '');
+  $s['notes_url'] = safe_url($s['notes_url'] ?? '');
+  return $s;
+}
+
+/* ── LOAD SERMONS FROM THE DB (newest first) ── */
+$sermons = [];
+foreach ($pdo->query('SELECT * FROM SERMON ORDER BY preached_on DESC, sermon_id DESC')->fetchAll() as $r) {
+  $ts = strtotime($r['preached_on']);
+  $sermons[] = [
+    'id'        => (int) $r['sermon_id'],
+    'title'     => $r['title'],
+    'speaker'   => $r['speaker'],
+    'series'    => $r['series'] !== '' ? $r['series'] : 'General',
+    'scripture' => $r['scripture'] ?? '',            // optional column – hidden when empty
+    'date'      => date('j M Y', $ts),
+    'year'      => date('Y', $ts),
+    'duration'  => (int) $r['duration_min'] . ' min',
+    'desc'      => $r['description'],
+    'video_url' => $r['video_url'],
+    'audio_url' => $r['audio_url'],
+    'notes_url' => $r['notes_url'],
+    'is_live'   => 0,
+    'popular'   => false,
+  ];
+}
+if (!$sermons) { $sermons = $sermons_fallback; }
+$sermons = array_map(fn($s) => resolve_media($s, $YT_CHANNEL, $YT_SEARCH_IN_CHANNEL), $sermons);
+
+/* ── Action buttons (Watch / Listen / Notes / Share) – used by the featured card AND every grid card ── */
+function sermon_actions(array $s, bool $featured): void {
+  $c = $featured
+     ? ['watch' => 'btn-watch', 'listen' => 'btn-listen', 'notes' => 'btn-notes', 'share' => 'btn-share']
+     : ['watch' => 'c-btn watch', 'listen' => 'c-btn listen', 'notes' => 'c-btn notes', 'share' => 'c-btn listen'];
+  $t = h($s['title']);
+  ?>
+  <!-- WATCH: plays in a pop-up if we have the video, otherwise opens YouTube -->
+  <a id="watch-<?= $s['id'] ?>" href="<?= h($s['watch_href']) ?>" target="_blank" rel="noopener noreferrer"
+     class="<?= $c['watch'] ?> js-watch" data-embed="<?= h($s['embed']) ?>" data-title="<?= $t ?>"
+     aria-label="Watch <?= $t ?> on YouTube">
+    <i class="ti ti-player-play-filled" aria-hidden="true"></i> Watch
+  </a>
+
+  <!-- LISTEN: real audio file if we have one, otherwise the video's audio on YouTube -->
+  <?php if ($s['audio_url']): ?>
+    <button type="button" class="<?= $c['listen'] ?> listen-btn" aria-label="Listen to <?= $t ?>">
+      <i class="ti ti-headphones" aria-hidden="true"></i> Listen
+    </button>
+  <?php else: ?>
+    <a href="<?= h($s['watch_href']) ?>" target="_blank" rel="noopener noreferrer"
+       class="<?= $c['listen'] ?> js-watch" data-embed="<?= h($s['embed']) ?>" data-title="<?= $t ?>" data-audio="1"
+       aria-label="Listen to <?= $t ?> on YouTube">
+      <i class="ti ti-headphones" aria-hidden="true"></i> Listen
+    </a>
+  <?php endif; ?>
+
+  <!-- NOTES: the church's own file if uploaded, otherwise a printable notes sheet -->
+  <a href="<?= h($s['notes_url'] ?: 'sermon_notes.php?id=' . $s['id']) ?>" target="_blank" rel="noopener noreferrer"
+     class="<?= $c['notes'] ?>" aria-label="Open sermon notes for <?= $t ?>">
+    <i class="ti ti-file-text" aria-hidden="true"></i> Notes
+  </a>
+
+  <button type="button" class="<?= $c['share'] ?> share-btn" data-title="<?= $t ?>"
+          aria-label="Share this sermon"<?= $featured ? '' : ' style="margin-left:auto"' ?>>
+    <i class="ti ti-share" aria-hidden="true"></i>
+  </button>
+  <?php if (!$featured && !empty($s['popular'])): ?>
+    <span class="popular-badge" aria-label="Popular sermon">🔥 Popular</span>
+  <?php endif; ?>
+  <?php
+}
+
+/* Inline audio player (only rendered when the sermon has an audio file) */
+function sermon_audio(array $s): void {
+  if (!$s['audio_url']) return; ?>
+  <div class="audio-player" aria-label="Audio player">
+    <span class="audio-title"><?= h($s['title']) ?></span>
+    <audio controls preload="none" src="<?= h($s['audio_url']) ?>">Your browser does not support audio playback.</audio>
+  </div>
+  <?php
+}
 
 /* ── DERIVED DATA FOR FILTERS ───────────
    We extract unique series and speakers
@@ -453,7 +591,7 @@ require_once 'includes/nav.php';
                  <img src="<?= htmlspecialchars($featured['thumb_url'] ?? '') ?>"
                       alt="Thumbnail for <?= htmlspecialchars($featured['title']) ?>"> -->
             <span class="sermon-badge latest" aria-label="Latest sermon">● LATEST</span>
-            <div class="play-circle" role="button" tabindex="0" aria-label="Watch sermon">
+            <div class="play-circle" role="button" tabindex="0" aria-label="Watch sermon" data-watch-for="watch-<?= $featured['id'] ?>">
               <i class="ti ti-player-play-filled" aria-hidden="true"></i>
             </div>
             <span class="thumb-label">Video Thumbnail</span>
@@ -468,10 +606,12 @@ require_once 'includes/nav.php';
             <h2 class="featured-title"><?= htmlspecialchars($featured['title']) ?></h2>
 
             <!-- Scripture reference — key differentiator for a church site -->
+            <?php if ($featured['scripture']): ?>
             <div class="featured-scripture">
               <i class="ti ti-bible" aria-hidden="true"></i>
               <?= htmlspecialchars($featured['scripture']) ?>
             </div>
+            <?php endif; ?>
 
             <!-- Speaker · Date · Duration -->
             <div class="featured-meta">
@@ -491,61 +631,11 @@ require_once 'includes/nav.php';
 
             <p class="featured-desc"><?= htmlspecialchars($featured['desc']) ?></p>
 
-            <!-- Watch / Listen / Notes / Share -->
             <div class="sermon-actions">
-              <a href="<?= htmlspecialchars($featured['video_url']) ?>"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 class="btn-watch"
-                 aria-label="Watch <?= htmlspecialchars($featured['title']) ?> on YouTube">
-                <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                Watch
-              </a>
-
-              <button class="btn-listen listen-btn"
-                      aria-label="Listen to audio of <?= htmlspecialchars($featured['title']) ?>">
-                <i class="ti ti-headphones" aria-hidden="true"></i>
-                Listen
-              </button>
-
-              <?php if ($featured['notes_url']): ?>
-                <a href="<?= htmlspecialchars($featured['notes_url']) ?>"
-                   class="btn-notes"
-                   aria-label="Download sermon notes for <?= htmlspecialchars($featured['title']) ?>">
-                  <i class="ti ti-file-text" aria-hidden="true"></i>
-                  Notes
-                </a>
-              <?php else: ?>
-                <button class="btn-notes c-btn notes unavailable"
-                        aria-label="Notes not yet available">
-                  <i class="ti ti-file-text" aria-hidden="true"></i>
-                  Notes
-                </button>
-              <?php endif; ?>
-
-              <!-- Share button: copies URL to clipboard via JS -->
-              <button class="btn-share share-btn"
-                      data-title="<?= htmlspecialchars($featured['title']) ?>"
-                      aria-label="Share this sermon">
-                <i class="ti ti-share" aria-hidden="true"></i>
-              </button>
+              <?php sermon_actions($featured, true); ?>
             </div>
 
-            <!-- Inline audio player (shown by JS when Listen is clicked) -->
-            <div class="audio-player" aria-label="Audio player" aria-hidden="true">
-              <button class="audio-play-btn" aria-label="Play or pause audio">
-                <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-              </button>
-              <div class="waveform" aria-hidden="true">
-                <!-- 8 animated bars create the waveform visualiser -->
-                <div class="wave-bar"></div><div class="wave-bar"></div>
-                <div class="wave-bar"></div><div class="wave-bar"></div>
-                <div class="wave-bar"></div><div class="wave-bar"></div>
-                <div class="wave-bar"></div><div class="wave-bar"></div>
-              </div>
-              <span class="audio-title"><?= htmlspecialchars($featured['title']) ?></span>
-              <span class="audio-time">0:00 / <?= htmlspecialchars($featured['duration']) ?></span>
-            </div>
+            <?php sermon_audio($featured); ?>
           </div>
         </article>
 
@@ -572,7 +662,7 @@ require_once 'includes/nav.php';
                    aria-label="Sermon: <?= htmlspecialchars($sermon['title']) ?>">
 
             <!-- Left: play icon thumbnail -->
-            <div class="card-thumb" role="button" tabindex="0" aria-label="Play sermon">
+            <div class="card-thumb" role="button" tabindex="0" aria-label="Play sermon" data-watch-for="watch-<?= $sermon['id'] ?>">
               <i class="ti ti-player-play-filled" aria-hidden="true"></i>
             </div>
 
@@ -587,10 +677,12 @@ require_once 'includes/nav.php';
               <h3 class="card-title"><?= htmlspecialchars($sermon['title']) ?></h3>
 
               <!-- Scripture reference -->
+              <?php if ($sermon['scripture']): ?>
               <div class="card-scripture">
                 <i class="ti ti-bible" aria-hidden="true"></i>
                 <?= htmlspecialchars($sermon['scripture']) ?>
               </div>
+              <?php endif; ?>
 
               <!-- Speaker / Date / Duration -->
               <div class="card-meta">
@@ -608,68 +700,11 @@ require_once 'includes/nav.php';
                 </span>
               </div>
 
-              <!-- Action buttons row -->
               <div class="card-actions">
-                <a href="<?= htmlspecialchars($sermon['video_url']) ?>"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="c-btn watch"
-                   aria-label="Watch <?= htmlspecialchars($sermon['title']) ?>">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                  Watch
-                </a>
-
-                <button class="c-btn listen listen-btn"
-                        aria-label="Listen to audio">
-                  <i class="ti ti-headphones" aria-hidden="true"></i>
-                  Listen
-                </button>
-
-                <?php if ($sermon['notes_url']): ?>
-                  <a href="<?= htmlspecialchars($sermon['notes_url']) ?>"
-                     class="c-btn notes"
-                     aria-label="Download notes">
-                    <i class="ti ti-file-text" aria-hidden="true"></i>
-                    Notes
-                  </a>
-                <?php else: ?>
-                  <button class="c-btn notes unavailable"
-                          aria-label="Notes not yet available">
-                    <i class="ti ti-file-text" aria-hidden="true"></i>
-                    Notes
-                  </button>
-                <?php endif; ?>
-
-                <!-- Share button -->
-                <button class="c-btn listen share-btn"
-                        data-title="<?= htmlspecialchars($sermon['title']) ?>"
-                        aria-label="Share this sermon"
-                        style="margin-left:auto">
-                  <i class="ti ti-share" aria-hidden="true"></i>
-                </button>
-
-                <!-- 🔥 Popular badge -->
-                <?php if ($sermon['popular']): ?>
-                  <span class="popular-badge" aria-label="Popular sermon">
-                    🔥 Popular
-                  </span>
-                <?php endif; ?>
+                <?php sermon_actions($sermon, false); ?>
               </div>
 
-              <!-- Inline audio player (toggled by JS) -->
-              <div class="audio-player" aria-label="Audio player" aria-hidden="true">
-                <button class="audio-play-btn" aria-label="Play or pause">
-                  <i class="ti ti-player-play-filled" aria-hidden="true"></i>
-                </button>
-                <div class="waveform" aria-hidden="true">
-                  <div class="wave-bar"></div><div class="wave-bar"></div>
-                  <div class="wave-bar"></div><div class="wave-bar"></div>
-                  <div class="wave-bar"></div><div class="wave-bar"></div>
-                  <div class="wave-bar"></div><div class="wave-bar"></div>
-                </div>
-                <span class="audio-title"><?= htmlspecialchars($sermon['title']) ?></span>
-                <span class="audio-time">0:00 / <?= htmlspecialchars($sermon['duration']) ?></span>
-              </div>
+              <?php sermon_audio($sermon); ?>
             </div>
           </article>
           <?php endforeach; ?>
@@ -800,5 +835,26 @@ require_once 'includes/nav.php';
   </div><!-- /section -->
 
 </main>
+
+<!-- ═══════════════════════════════════
+     VIDEO POP-UP  (opened by Watch / Listen)
+     The iframe is emptied on close so playback stops.
+════════════════════════════════════ -->
+<div class="video-modal" id="videoModal" role="dialog" aria-modal="true" aria-labelledby="videoModalTitle" hidden>
+  <div class="video-modal-box">
+    <div class="video-modal-head">
+      <h3 id="videoModalTitle"></h3>
+      <button type="button" class="video-modal-close" id="videoModalClose" aria-label="Close video">
+        <i class="ti ti-x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="video-modal-frame">
+      <iframe id="videoModalFrame" title="Sermon video" src="" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+    </div>
+    <a id="videoModalYT" class="video-modal-yt" href="#" target="_blank" rel="noopener noreferrer">
+      <i class="ti ti-brand-youtube" aria-hidden="true"></i> Open on YouTube
+    </a>
+  </div>
+</div>
 
 <?php require_once 'includes/footer.php'; ?>
