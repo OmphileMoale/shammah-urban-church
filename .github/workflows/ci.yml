@@ -1,0 +1,44 @@
+# GitHub Actions: automated build and tests for the Shammah Urban Church website.
+# It mirrors azure-pipelines.yml, so the same checks run on GitHub and on Azure DevOps.
+name: CI
+
+# Run on every push and every pull request that targets main
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Get the code
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      # 2. Install PHP so we can compile-check every file
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Show tool versions
+        run: |
+          php --version
+          python3 --version
+
+      # 3. BUILD: every PHP file must compile without syntax errors
+      - name: "Build: PHP syntax check (php -l)"
+        run: |
+          set -e
+          find . -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      # 4. TEST 1: every table has 10+ records and passwords are bcrypt hashes
+      - name: "Test: database tables and seed data"
+        run: python3 tests/check_database.py
+
+      # 5. TEST 2: nav links, role guard, CSRF, password hashing, login lockout
+      - name: "Test: site structure and security checks"
+        run: python3 tests/check_site.py
